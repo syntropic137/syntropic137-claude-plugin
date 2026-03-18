@@ -3,5 +3,11 @@
   "version": "0.1.0",
   "description": "Syntropic137 platform plugin — setup, observe, and operate your AI agent workflow engine from Claude Code",
   "author": { "name": "Syntropic137" },
-  "repository": "https://github.com/syntropic137/syntropic137-claude-plugin"
+  "homepage": "https://github.com/syntropic137/syntropic137",
+  "repository": "https://github.com/syntropic137/syntropic137-claude-plugin",
+  "license": "MIT",
+  "keywords": ["ai-agents", "orchestration", "observability", "workflows", "devops"],
+  "commands": "./commands/",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }

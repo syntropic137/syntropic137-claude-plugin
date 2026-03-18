@@ -1,3 +1,8 @@
+---
+name: setup
+description: Syntropic137 platform setup — 14-stage onboarding wizard, 1Password, Cloudflare tunnels, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
+---
+
 # Setup & Infrastructure — Syntropic137
 
 Use this knowledge when the user asks about setting up the platform, configuring secrets, managing the Docker stack, understanding the justfile recipes, or troubleshooting infrastructure issues.

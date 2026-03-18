@@ -1,3 +1,8 @@
+---
+name: workflow-management
+description: Create, configure, and manage Syntropic137 workflow templates — phase definitions, agent config, YAML schema, $ARGUMENTS substitution, input declarations, and design patterns like RIPER-5
+---
+
 # Workflow Management — Syntropic137
 
 Use this knowledge when the user wants to create, configure, inspect, or manage workflows. Workflows are the core unit of work in Syntropic137 — they define multi-phase agent execution pipelines.
