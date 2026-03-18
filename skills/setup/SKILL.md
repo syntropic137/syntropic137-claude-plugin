@@ -183,7 +183,7 @@ Located in `infra/docker/secrets/`:
 | TimescaleDB | `syn-db` | 5432 | PostgreSQL + time-series |
 | Event Store | `syn-event-store` | 50051 | Rust gRPC event store |
 | Collector | `syn-collector` | 8080 | Event ingestion |
-| API | `syn-api` | 8000 | FastAPI HTTP server |
+| API (`syn-api`) | 8137 | FastAPI HTTP server |
 | Redis | `syn-redis` | 6379 | Cache + pub/sub |
 | MinIO | `syn-minio` | 9000/9001 | S3 artifact storage |
 | Envoy Proxy | `syn-envoy` | 8081/9901 | Token injection proxy |
@@ -296,7 +296,7 @@ Located in `infra/docker/secrets/`:
 1. Check Docker: `docker info`
 2. Check prerequisites: `just setup-check`
 3. Check env: `just dev-doctor`
-4. Check ports: another process on 5432, 8000, etc.?
+4. Check ports: another process on 5432, 8137, etc.?
 
 ### "Services unhealthy after start"
 
