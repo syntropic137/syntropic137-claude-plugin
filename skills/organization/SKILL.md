@@ -20,22 +20,22 @@ This hierarchy enables:
 
 ```bash
 # List organizations
-curl -s http://localhost:8000/organizations | python -m json.tool
+curl -s http://localhost:8137/organizations | python -m json.tool
 
 # Create organization
-curl -X POST http://localhost:8000/organizations \
+curl -X POST http://localhost:8137/organizations \
   -H "Content-Type: application/json" \
   -d '{"name": "Syntropic137", "slug": "syn137"}'
 
 # Get organization detail
-curl -s http://localhost:8000/organizations/<org-id> | python -m json.tool
+curl -s http://localhost:8137/organizations/<org-id> | python -m json.tool
 
 # Update
-curl -X PUT http://localhost:8000/organizations/<org-id> \
+curl -X PUT http://localhost:8137/organizations/<org-id> \
   -d '{"name": "New Name"}'
 
 # Delete (soft delete — cannot update/delete again after)
-curl -X DELETE http://localhost:8000/organizations/<org-id>
+curl -X DELETE http://localhost:8137/organizations/<org-id>
 ```
 
 ### Domain Model
@@ -51,10 +51,10 @@ Systems group related repos for monitoring and cost analysis.
 
 ```bash
 # List systems in an org
-curl -s "http://localhost:8000/systems?organization_id=<org-id>" | python -m json.tool
+curl -s "http://localhost:8137/systems?organization_id=<org-id>" | python -m json.tool
 
 # Create system
-curl -X POST http://localhost:8000/systems \
+curl -X POST http://localhost:8137/systems \
   -H "Content-Type: application/json" \
   -d '{
     "organization_id": "<org-id>",
@@ -63,13 +63,13 @@ curl -X POST http://localhost:8000/systems \
   }'
 
 # Get system detail (includes health, cost data)
-curl -s http://localhost:8000/systems/<system-id> | python -m json.tool
+curl -s http://localhost:8137/systems/<system-id> | python -m json.tool
 
 # Get system health status
-curl -s http://localhost:8000/systems/<system-id>/status | python -m json.tool
+curl -s http://localhost:8137/systems/<system-id>/status | python -m json.tool
 
 # Get system cost
-curl -s http://localhost:8000/systems/<system-id>/cost | python -m json.tool
+curl -s http://localhost:8137/systems/<system-id>/cost | python -m json.tool
 ```
 
 ### Domain Model
@@ -85,10 +85,10 @@ Repos are registered from GitHub App installations and can be assigned to system
 
 ```bash
 # List repos
-curl -s "http://localhost:8000/repos?organization_id=<org-id>" | python -m json.tool
+curl -s "http://localhost:8137/repos?organization_id=<org-id>" | python -m json.tool
 
 # Register repo (usually automatic via GitHub App)
-curl -X POST http://localhost:8000/repos \
+curl -X POST http://localhost:8137/repos \
   -H "Content-Type: application/json" \
   -d '{
     "organization_id": "<org-id>",
@@ -101,11 +101,11 @@ curl -X POST http://localhost:8000/repos \
   }'
 
 # Assign repo to system
-curl -X POST http://localhost:8000/repos/<repo-id>/assign \
+curl -X POST http://localhost:8137/repos/<repo-id>/assign \
   -d '{"system_id": "<system-id>"}'
 
 # Unassign from system (must unassign before reassigning)
-curl -X POST http://localhost:8000/repos/<repo-id>/unassign
+curl -X POST http://localhost:8137/repos/<repo-id>/unassign
 ```
 
 ### Domain Model

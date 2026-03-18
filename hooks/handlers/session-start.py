@@ -11,7 +11,7 @@ import sys
 import urllib.request
 import urllib.error
 
-API_URL = os.environ.get("SYN_API_URL", "http://localhost:8000")
+API_URL = os.environ.get("SYN_API_URL", "http://localhost:8137")
 HEALTH_ENDPOINT = f"{API_URL}/health"
 TIMEOUT_SECONDS = 2
 
