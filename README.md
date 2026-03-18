@@ -1,6 +1,6 @@
 # Syntropic137 Claude Code Plugin
 
-A Claude Code plugin for setting up, observing, and operating the [Syntropic137](https://github.com/syntropic137/syntropic137) AI agent workflow engine.
+Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, kick off executions, monitor costs, troubleshoot issues — all through natural conversation.
 
 ## Installation
 
@@ -48,15 +48,32 @@ That's it. The setup wizard detects your environment, reports what's working and
 
 ## How It Works
 
-The plugin wraps the `syn` CLI and `just` task runner to give you a conversational interface to the Syntropic137 platform:
+The plugin combines **slash commands** for quick actions with **deep skill knowledge** that lets Claude Code understand and operate the entire Syntropic137 platform intelligently.
 
-- **Setup commands** use `just` recipes for infrastructure operations
-- **Operational commands** delegate to `uv run --package syn-cli syn <command>`
-- **Session start hook** checks API reachability and notifies you if the platform is down
+- **Commands** — Quick entry points for common operations (delegate to `syn` CLI and `just` recipes)
+- **Skills** — Deep domain knowledge that Claude uses to reason about your platform (see below)
+- **Hook** — Session start connectivity check, so Claude knows if the platform is up
 
-## Skills
+## Skills (Domain Knowledge)
 
-The plugin includes a `platform-ops` skill that provides Claude with architecture context, service maps, and troubleshooting recipes. This is automatically available when the plugin is installed — no need to invoke it directly.
+Skills give Claude deep understanding of the system. They're automatically loaded when relevant — you don't invoke them directly. Claude uses this knowledge to answer questions, suggest approaches, and troubleshoot issues.
+
+| Skill | What Claude Learns |
+|-------|-------------------|
+| **workflow-management** | How to create, configure, and manage workflow templates. Phase definitions, agent configuration, workflow types and classifications, design patterns (research→plan→implement→review). |
+| **execution-control** | How to run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), troubleshoot failed executions. Understands the Processor To-Do List pattern. |
+| **observability** | Sessions, tool timelines, token metrics, cost breakdowns. Two-lane architecture. How to interpret "why was this expensive?" or "why did this fail?" |
+| **organization** | Org→System→Repo hierarchy, GitHub App integration, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs. |
+| **platform-ops** | Infrastructure: service map with ports, Docker stack, workspace management, token injection security, QA/testing, troubleshooting recipes. |
+
+### What this means in practice
+
+Instead of memorizing CLI commands, just tell Claude what you want:
+
+- *"Create a workflow that reviews PRs on my backend repo"* → Claude uses workflow-management + organization skills
+- *"Why did execution exec-abc123 fail?"* → Claude uses execution-control + observability skills
+- *"Set up automatic triggers for when issues are opened"* → Claude uses organization skill (trigger rules)
+- *"The API is down, help me fix it"* → Claude uses platform-ops skill
 
 ## Development
 

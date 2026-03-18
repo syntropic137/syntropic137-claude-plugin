@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, AskUserQuestion
 
 You are running the Syntropic137 setup wizard. Your job is to detect the current state of the platform, report what's working and what's not, then guide the user through fixing any issues.
 
-**Important:** Reference the `platform-ops` skill for architecture context and troubleshooting recipes.
+**Important:** Use the `platform-ops` skill for architecture context, service map, and troubleshooting recipes. After setup completes, mention the other available skills (workflow-management, execution-control, observability, organization) so the user knows what they can do next.
 
 ## Phase 1 — Detection (read-only)
 
@@ -63,4 +63,8 @@ For each FAIL, offer the fix. **Ask before running anything destructive.**
 
 Work through failures **in order** (earlier checks are prerequisites for later ones). After fixing each issue, re-run that check to confirm it passes before moving on.
 
-When all checks pass, print the final status table and suggest next steps.
+When all checks pass, print the final status table and suggest next steps:
+- "Try `/syn-status` for a quick platform overview"
+- "Ask me to create a workflow — I know how to design multi-phase agent pipelines"
+- "Ask me to set up automatic PR reviews with GitHub trigger rules"
+- "Use `/syn-sessions list` to see agent execution history"
