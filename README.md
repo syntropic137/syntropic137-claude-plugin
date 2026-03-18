@@ -60,20 +60,24 @@ Skills give Claude deep understanding of the system. They're automatically loade
 
 | Skill | What Claude Learns |
 |-------|-------------------|
-| **workflow-management** | How to create, configure, and manage workflow templates. Phase definitions, agent configuration, workflow types and classifications, design patterns (research→plan→implement→review). |
-| **execution-control** | How to run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), troubleshoot failed executions. Understands the Processor To-Do List pattern. |
+| **workflow-management** | Creating workflows as CC commands: `$ARGUMENTS`, `{{variable}}`, `{{phase-id}}` substitution. Input declarations, per-phase model overrides, YAML schema, RIPER-5 and research patterns. |
+| **execution-control** | Running workflows (`--task`), monitoring progress, control plane (pause/resume/cancel/inject), Processor To-Do List internals, troubleshooting failures. |
 | **observability** | Sessions, tool timelines, token metrics, cost breakdowns. Two-lane architecture. How to interpret "why was this expensive?" or "why did this fail?" |
-| **organization** | Org→System→Repo hierarchy, GitHub App integration, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs. |
-| **platform-ops** | Infrastructure: service map with ports, Docker stack, workspace management, token injection security, QA/testing, troubleshooting recipes. |
+| **organization** | Org→System→Repo hierarchy, cost rollup, health monitoring, contribution heatmaps. |
+| **github-automation** | GitHub App setup, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs, Smee/Cloudflare webhook delivery. |
+| **setup** | 14-stage onboarding wizard, 1Password vault integration, Cloudflare tunnels, Docker Compose variants, 100+ justfile recipes, secrets management, troubleshooting. |
+| **platform-ops** | Service map with ports, workspace management, token injection security (Envoy proxy), QA/testing commands, infrastructure troubleshooting recipes. |
 
 ### What this means in practice
 
 Instead of memorizing CLI commands, just tell Claude what you want:
 
-- *"Create a workflow that reviews PRs on my backend repo"* → Claude uses workflow-management + organization skills
+- *"Create a workflow that reviews PRs on my backend repo"* → Claude uses workflow-management + github-automation skills
 - *"Why did execution exec-abc123 fail?"* → Claude uses execution-control + observability skills
-- *"Set up automatic triggers for when issues are opened"* → Claude uses organization skill (trigger rules)
+- *"Set up automatic triggers for when issues are opened"* → Claude uses github-automation skill
 - *"The API is down, help me fix it"* → Claude uses platform-ops skill
+- *"Help me set up 1Password for secrets"* → Claude uses setup skill
+- *"How do I deploy with Cloudflare tunnel?"* → Claude uses setup skill
 
 ## Development
 
