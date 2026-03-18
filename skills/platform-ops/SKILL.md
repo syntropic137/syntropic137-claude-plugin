@@ -18,7 +18,7 @@ Syntropic137 orchestrates AI agent execution in isolated Docker workspaces and c
 
 | Service | Port | Description |
 |---------|------|-------------|
-| API (`syn-api`) | 8000 | FastAPI HTTP server — routes + application services |
+| API (`syn-api`) | 8137 | FastAPI HTTP server — routes + application services |
 | Collector (`syn-collector`) | 8080 | Event ingestion API |
 | Event Store | 50051 | Rust gRPC event store |
 | TimescaleDB | 5432 | PostgreSQL + TimescaleDB for projections + observability |
@@ -78,7 +78,7 @@ Syntropic137 orchestrates AI agent execution in isolated Docker workspaces and c
 
 1. Ensure deps are installed: `just dashboard-install`
 2. Start frontend dev server: `just dashboard-frontend`
-3. Dashboard connects to API on port 8000 — ensure API is healthy
+3. Dashboard connects to API on port 8137 — ensure API is healthy
 
 ## Workspace Management
 
