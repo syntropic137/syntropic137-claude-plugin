@@ -120,7 +120,7 @@ Detailed tool execution traces — when each tool was called, how long it took, 
 uv run --package syn-cli syn observe tools <session-id>
 
 # Via API
-curl -s "http://localhost:8000/observability/sessions/<session-id>/tools?limit=100" | python -m json.tool
+curl -s "http://localhost:8137/observability/sessions/<session-id>/tools?limit=100" | python -m json.tool
 ```
 
 Response shape:
@@ -155,7 +155,7 @@ Per-message token usage with cache statistics.
 uv run --package syn-cli syn observe tokens <session-id>
 
 # Via API
-curl -s "http://localhost:8000/observability/sessions/<session-id>/tokens" | python -m json.tool
+curl -s "http://localhost:8137/observability/sessions/<session-id>/tokens" | python -m json.tool
 ```
 
 Response shape:
@@ -209,10 +209,10 @@ The `SessionCost` projection tracks granular cost breakdowns:
 
 ```bash
 # Session cost
-curl -s "http://localhost:8000/costs/sessions/<session-id>" | python -m json.tool
+curl -s "http://localhost:8137/costs/sessions/<session-id>" | python -m json.tool
 
 # Execution cost (aggregated across all phases)
-curl -s "http://localhost:8000/costs/executions/<execution-id>" | python -m json.tool
+curl -s "http://localhost:8137/costs/executions/<execution-id>" | python -m json.tool
 ```
 
 ## Metrics

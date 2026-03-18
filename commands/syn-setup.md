@@ -24,7 +24,7 @@ Run ALL of these checks. Do not skip any. Capture results silently.
 | 7 | Dashboard dependencies installed | `test -d apps/syn-dashboard-ui/node_modules` | exit 0 |
 | 8 | Workspace image built | `docker image inspect agentic-workspace-claude-cli:latest >/dev/null 2>&1` | exit 0 |
 | 9 | Services running | `docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps --format json 2>/dev/null` | Non-empty, services in "running" state |
-| 10 | API healthy | `curl -sf http://localhost:8000/health` | exit 0 with JSON response |
+| 10 | API healthy | `curl -sf http://localhost:8137/health` | exit 0 with JSON response |
 
 ## Phase 2 — Status Report
 

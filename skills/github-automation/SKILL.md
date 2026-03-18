@@ -89,7 +89,7 @@ uv run --package syn-cli syn triggers create "PR Review Bot" \
   --condition "base.ref=main"
 
 # Via API
-curl -X POST http://localhost:8000/triggers \
+curl -X POST http://localhost:8137/triggers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "PR Review Bot",

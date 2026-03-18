@@ -26,7 +26,7 @@ uv run --package syn-cli syn workflow status <execution-id>
 
 ```bash
 # Start execution
-curl -X POST http://localhost:8000/workflows/<workflow-id>/execute \
+curl -X POST http://localhost:8137/workflows/<workflow-id>/execute \
   -H "Content-Type: application/json" \
   -d '{
     "inputs": {"issue_url": "https://github.com/org/repo/issues/42"},
@@ -52,15 +52,15 @@ curl -X POST http://localhost:8000/workflows/<workflow-id>/execute \
 uv run --package syn-cli syn sessions list
 
 # Filter by status
-curl -s "http://localhost:8000/executions?status=running" | python -m json.tool
-curl -s "http://localhost:8000/executions?status=failed" | python -m json.tool
+curl -s "http://localhost:8137/executions?status=running" | python -m json.tool
+curl -s "http://localhost:8137/executions?status=failed" | python -m json.tool
 ```
 
 ### Execution Detail
 
 ```bash
 # Full detail with phase breakdown
-curl -s http://localhost:8000/executions/<execution-id> | python -m json.tool
+curl -s http://localhost:8137/executions/<execution-id> | python -m json.tool
 ```
 
 Response shape:
@@ -123,14 +123,14 @@ Control a running execution via HTTP or WebSocket.
 uv run --package syn-cli syn control pause <execution-id> --reason "Reviewing intermediate results"
 
 # Via API
-curl -X POST http://localhost:8000/executions/<execution-id>/pause \
+curl -X POST http://localhost:8137/executions/<execution-id>/pause \
   -d '{"reason": "Reviewing intermediate results"}'
 
 # Resume
 uv run --package syn-cli syn control resume <execution-id>
 
 # Via API
-curl -X POST http://localhost:8000/executions/<execution-id>/resume
+curl -X POST http://localhost:8137/executions/<execution-id>/resume
 ```
 
 ### Cancel
@@ -140,7 +140,7 @@ curl -X POST http://localhost:8000/executions/<execution-id>/resume
 uv run --package syn-cli syn control cancel <execution-id> --reason "Wrong workflow template"
 
 # Via API
-curl -X POST http://localhost:8000/executions/<execution-id>/cancel \
+curl -X POST http://localhost:8137/executions/<execution-id>/cancel \
   -d '{"reason": "Wrong workflow template"}'
 ```
 
@@ -157,11 +157,11 @@ Send additional context or instructions to a running agent:
 
 ```bash
 # Via API — inject a user message
-curl -X POST http://localhost:8000/executions/<execution-id>/inject \
+curl -X POST http://localhost:8137/executions/<execution-id>/inject \
   -d '{"message": "Focus on the auth middleware, not the database layer", "role": "user"}'
 
 # System-level injection
-curl -X POST http://localhost:8000/executions/<execution-id>/inject \
+curl -X POST http://localhost:8137/executions/<execution-id>/inject \
   -d '{"message": "Budget limit approaching, wrap up current phase", "role": "system"}'
 ```
 
@@ -170,7 +170,7 @@ curl -X POST http://localhost:8000/executions/<execution-id>/inject \
 For real-time bidirectional control:
 
 ```
-ws://localhost:8000/ws/control/<execution-id>
+ws://localhost:8137/ws/control/<execution-id>
 ```
 
 ## Execution Statuses
@@ -235,7 +235,7 @@ Phase Loop:
 ### 1. Check execution detail
 
 ```bash
-curl -s http://localhost:8000/executions/<execution-id> | python -m json.tool
+curl -s http://localhost:8137/executions/<execution-id> | python -m json.tool
 ```
 
 Look at:

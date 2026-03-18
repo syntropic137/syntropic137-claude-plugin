@@ -50,7 +50,7 @@ Syntropic137 orchestrates AI agent execution in isolated Docker workspaces and c
 
 1. Check if containers are running: `docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps`
 2. Check API logs: `just dev-logs` (or `docker compose ... logs api --tail 50`)
-3. Check health endpoint directly: `curl -sf http://localhost:8000/health`
+3. Check health endpoint directly: `curl -sf http://localhost:8137/health`
 4. If the API container is restarting, check for dependency issues (TimescaleDB, Event Store)
 5. Run `just dev-doctor` for automated diagnostics
 
@@ -150,7 +150,7 @@ just test-stack-down       # Tear down test infrastructure
 
 | Variable | Purpose |
 |----------|---------|
-| `SYN_API_URL` | API base URL (default: `http://localhost:8000`) |
+| `SYN_API_URL` | API base URL (default: `http://localhost:8137`) |
 | `ANTHROPIC_API_KEY` | Required for agent execution |
 | `GITHUB_TOKEN` | Required for GitHub App integration |
 | `GITHUB_APP_ID` | GitHub App ID |

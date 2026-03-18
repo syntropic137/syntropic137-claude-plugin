@@ -210,7 +210,7 @@ uv run --package syn-cli syn run <workflow-id> -t "Fix the login regression"
 
 ```bash
 # Create workflow template
-curl -X POST http://localhost:8000/workflows \
+curl -X POST http://localhost:8137/workflows \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Fix Bug in Auth Service",
@@ -258,7 +258,7 @@ curl -X POST http://localhost:8000/workflows \
   }'
 
 # Execute with task
-curl -X POST http://localhost:8000/workflows/<workflow-id>/execute \
+curl -X POST http://localhost:8137/workflows/<workflow-id>/execute \
   -H "Content-Type: application/json" \
   -d '{
     "task": "Fix the auth middleware timeout when tokens expire",
@@ -276,7 +276,7 @@ uv run --package syn-cli syn workflow list
 uv run --package syn-cli syn workflow show <workflow-id>
 
 # List execution runs for a workflow
-curl -s http://localhost:8000/workflows/<workflow-id>/runs | python -m json.tool
+curl -s http://localhost:8137/workflows/<workflow-id>/runs | python -m json.tool
 ```
 
 ### API Endpoints
