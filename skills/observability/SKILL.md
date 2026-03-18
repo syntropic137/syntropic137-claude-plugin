@@ -1,3 +1,8 @@
+---
+name: observability
+description: Query Syntropic137 agent sessions, tool timelines, token metrics, cost breakdowns, and interpret observability data — why was a session expensive, why did it fail
+---
+
 # Observability — Syntropic137
 
 Use this knowledge when the user asks about sessions, costs, metrics, tool usage, token consumption, or wants to understand what an agent did during execution.

@@ -1,3 +1,8 @@
+---
+name: execution-control
+description: Run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), and troubleshoot failed Syntropic137 executions
+---
+
 # Execution Control — Syntropic137
 
 Use this knowledge when the user wants to run workflows, monitor execution progress, pause/resume/cancel executions, or understand why an execution failed.

@@ -1,3 +1,8 @@
+---
+name: platform-ops
+description: Syntropic137 infrastructure operations — service map, Docker stack, workspace lifecycle, Envoy token injection security, QA/testing commands, and troubleshooting recipes
+---
+
 # Platform Operations — Syntropic137
 
 Use this knowledge when troubleshooting, diagnosing, or operating the Syntropic137 platform.

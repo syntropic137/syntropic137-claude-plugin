@@ -1,3 +1,8 @@
+---
+name: organization
+description: Manage the Syntropic137 Organization→System→Repo hierarchy for cost rollup, health monitoring, and contribution tracking
+---
+
 # Organization Management — Syntropic137
 
 Use this knowledge when the user wants to manage organizations, systems, and repositories — the structural hierarchy for tracking health, costs, and patterns across their projects.

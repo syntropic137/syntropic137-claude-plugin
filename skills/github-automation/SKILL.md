@@ -1,3 +1,8 @@
+---
+name: github-automation
+description: Set up GitHub App integration, create webhook trigger rules with safety limits, and automate Syntropic137 workflow execution from GitHub events
+---
+
 # GitHub Automation — Syntropic137
 
 Use this knowledge when the user wants to set up GitHub App integration, create webhook trigger rules, or automate workflow execution based on GitHub events.

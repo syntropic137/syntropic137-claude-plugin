@@ -1,0 +1,22 @@
+{
+  "name": "syntropic137",
+  "owner": {
+    "name": "Syntropic137",
+    "email": "hello@syntropic137.dev"
+  },
+  "metadata": {
+    "description": "Syntropic137 AI agent orchestration platform plugins",
+    "version": "1.0"
+  },
+  "plugins": [
+    {
+      "name": "syntropic",
+      "source": "./",
+      "description": "Setup, observe, and operate your AI agent workflow engine from Claude Code",
+      "version": "0.1.0",
+      "author": { "name": "Syntropic137" },
+      "category": "devops",
+      "tags": ["ai-agents", "orchestration", "observability", "workflows", "docker"]
+    }
+  ]
+}
