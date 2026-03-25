@@ -1,0 +1,49 @@
+name: Plugin Version Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  version-check:
+    name: Enforce Version Bump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check plugin version
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          plugin_json=".claude-plugin/plugin.json"
+
+          # Check if any content files changed (excluding plugin.json itself)
+          changed_files=$(git diff --name-only "$base"...HEAD -- . | grep -v '\.claude-plugin/plugin\.json' || true)
+
+          if [[ -z "$changed_files" ]]; then
+            echo "No content changes, skipping version check"
+            exit 0
+          fi
+
+          head_version=$(jq -r '.version' "$plugin_json")
+          base_version=$(git show "${base}:${plugin_json}" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "")
+
+          if [[ -z "$base_version" ]]; then
+            echo "New plugin, no base version to compare"
+            exit 0
+          fi
+
+          if [[ "$base_version" == "$head_version" ]]; then
+            echo ""
+            echo "Plugin content changed but version not bumped (${base_version})"
+            echo ""
+            echo "Changed files:"
+            echo "$changed_files" | sed 's/^/  /'
+            echo ""
+            echo "Update version in ${plugin_json}"
+            echo "Claude Code uses the version field to detect plugin updates."
+            exit 1
+          fi
+
+          echo "Version bumped ${base_version} → ${head_version}"

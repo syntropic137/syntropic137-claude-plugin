@@ -1,0 +1,40 @@
+name: Plugin Tag
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag-plugin-version:
+    name: Tag Plugin Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Create tag if version bumped
+        run: |
+          plugin_json=".claude-plugin/plugin.json"
+
+          head_version=$(jq -r '.version' "$plugin_json")
+          base_version=$(git show HEAD~1:"${plugin_json}" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "")
+
+          if [[ -z "$base_version" ]] || [[ "$base_version" == "$head_version" ]]; then
+            echo "No version change (${head_version}), skipping"
+            exit 0
+          fi
+
+          tag="v${head_version}"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists, skipping"
+            exit 0
+          fi
+
+          git tag "$tag"
+          git push --tags
+          echo "Tagged ${tag} (was ${base_version})"

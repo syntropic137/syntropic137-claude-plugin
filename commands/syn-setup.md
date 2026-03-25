@@ -50,9 +50,9 @@ For each FAIL, offer the fix. **Ask before running anything destructive.**
 
 | Failed Check | Remediation |
 |-------------|-------------|
-| Not in repo | Tell the user to `cd` into the syntropic137 directory |
+| Not in repo | 1. Check if a `syntropic137` directory exists nearby (`ls ../syntropic137`, `ls ~/Code/*/syntropic137`, `ls ~/projects/*/syntropic137`). 2. If found, tell the user to `cd` into it and re-run `/syn-setup`. 3. If not found, ask the user where they'd like to clone it (suggest `~/Code/syntropic137` or current directory), then offer to run `git clone https://github.com/syntropic137/syntropic137.git <path> && cd <path>`. |
 | Docker not running | Tell the user to start Docker Desktop / `dockerd` |
-| Prerequisites missing | `just setup-check` already prints what's missing — relay that |
+| Prerequisites missing | Check each tool individually. For each missing tool, show the user its **official installation page** and the recommended install command, then ask if they'd like you to run it. Reference docs: **Docker** → https://docs.docker.com/get-docker/; **uv** → https://docs.astral.sh/uv/getting-started/installation/; **just** → https://github.com/casey/just#installation; **Node.js** → https://nodejs.org/en/download/; **pnpm** → https://pnpm.io/installation. Before offering any install command, fetch the tool's install docs page to confirm the current recommended method. Present the exact command you'd run and let the user approve or reject each one. After each install, verify with `command -v <tool>`. |
 | Submodules not initialized | Offer to run `just submodules-init` |
 | `.env` missing | Offer to run `cp .env.example .env`, then prompt for required API keys (ANTHROPIC_API_KEY, GITHUB_TOKEN) |
 | Python deps missing | Offer to run `uv sync` |
