@@ -19,7 +19,7 @@ jobs:
           plugin_json=".claude-plugin/plugin.json"
 
           # Check if any content files changed (excluding plugin.json itself)
-          changed_files=$(git diff --name-only "$base"...HEAD -- . | grep -v '.claude-plugin/plugin.json' || true)
+          changed_files=$(git diff --name-only "$base"...HEAD -- . | grep -v '\.claude-plugin/plugin\.json' || true)
 
           if [[ -z "$changed_files" ]]; then
             echo "No content changes, skipping version check"
