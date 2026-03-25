@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/syn137-banner-claude-plugin.png" alt="Syntropic137 Claude Code Plugin" width="100%" />
+  <img src="./public/assets/syn137-banner-claude-plugin.png" alt="Syntropic137 Claude Code Plugin" width="100%" />
 </p>
 
 # Syntropic137 Claude Code Plugin
