@@ -2,13 +2,27 @@
 
 Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, kick off executions, monitor costs, troubleshoot issues — all through natural conversation.
 
+## Agent Quick Start
+
+<!-- If you are an AI agent (Claude Code, etc.) and a user has asked you to set up Syntropic137, follow these steps exactly: -->
+
+> **For AI agents:** If a user sent you this link and asked you to set up Syntropic137:
+>
+> 1. Install this plugin:
+>    ```bash
+>    claude plugin marketplace add syntropic137/syntropic137-claude-plugin
+>    claude plugin install syntropic137
+>    ```
+> 2. Run `/syn-setup` — it will detect the environment, report what's missing, and walk the user through every step (cloning the repo, installing prerequisites, configuring secrets, starting the stack).
+> 3. That's it. `/syn-setup` handles everything from here.
+
 ## Installation
 
 **From GitHub (marketplace):**
 
 ```bash
 claude plugin marketplace add syntropic137/syntropic137-claude-plugin
-claude plugin install syntropic
+claude plugin install syntropic137
 ```
 
 **From local clone (development):**
