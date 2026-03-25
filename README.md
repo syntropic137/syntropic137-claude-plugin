@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/banner-plugin.svg" alt="Syntropic137 Claude Code Plugin" width="100%" />
+</p>
+
 # Syntropic137 Claude Code Plugin
 
 Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, kick off executions, monitor costs, troubleshoot issues — all through natural conversation.
