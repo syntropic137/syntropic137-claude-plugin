@@ -6,8 +6,22 @@ argument-hint: "[--workflow <id>]"
 
 # /syn-metrics — Aggregated Metrics
 
-Parse the user's argument:
-- No argument → `uv run --package syn-cli syn metrics show`
-- `--workflow <id>` → `uv run --package syn-cli syn metrics show --workflow <id>`
+First, resolve the API URL:
 
-Run the appropriate command and display the output. If the API is unreachable, suggest running `/syn-health` to diagnose.
+```bash
+if [ -n "${SYN_API_URL:-}" ]; then
+    SYN_API_URL="$SYN_API_URL"
+elif [ -f "$HOME/.syntropic137/.env" ]; then
+    _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+    if [ -n "$_hostname" ]; then
+        SYN_API_URL="https://$_hostname"
+    fi
+fi
+SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
+```
+
+Parse the user's argument:
+- No argument → `curl -sf "$SYN_API_URL/api/v1/metrics"`
+- `--workflow <id>` → `curl -sf "$SYN_API_URL/api/v1/metrics?workflow_id=<id>"`
+
+Run the appropriate command and display the output (pipe through `python3 -m json.tool` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.

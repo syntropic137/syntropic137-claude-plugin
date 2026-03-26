@@ -55,14 +55,16 @@ just setup-stage configure_github_app
 
 ### Webhook Delivery
 
-Webhooks need to reach the API. Two options:
+Webhooks need to reach the API. Two options depending on your environment:
 
 | Method | Use Case | Setup |
 |--------|----------|-------|
-| **Cloudflare Tunnel** | Production/selfhost | `just onboard` configures tunnel + domain |
-| **Smee.io proxy** | Development only | `just onboard-dev` auto-creates channel |
+| **Cloudflare Tunnel** | Selfhost / production | Published path: configured during install. Source repo: `just onboard` configures tunnel + domain |
+| **Smee.io proxy** | Local development only | `just onboard-dev` auto-creates channel (source repo only) |
 
-Dev webhook proxy:
+**Selfhost / published path:** Cloudflare tunnels are the exclusive webhook delivery method. The tunnel routes GitHub webhooks through Cloudflare's network to your local API. Configure the tunnel's public hostname to point to `http://gateway:8081` in the Cloudflare Zero Trust dashboard.
+
+**Development (source repo only):**
 ```bash
 just dev-webhooks         # Start Smee proxy manually
 just dev-webhooks-logs    # View proxy logs
@@ -85,16 +87,7 @@ Trigger rules automate workflow execution based on GitHub webhook events. A trig
 ### Creating Triggers
 
 ```bash
-# Via CLI
-uv run --package syn-cli syn triggers create "PR Review Bot" \
-  --event pull_request \
-  --repo syntropic137/syntropic137 \
-  --workflow <workflow-id> \
-  --condition "action=opened" \
-  --condition "base.ref=main"
-
-# Via API
-curl -X POST http://localhost:8137/triggers \
+curl -X POST http://localhost:8137/api/v1/triggers \
   -H "Content-Type: application/json" \
   -d '{
     "name": "PR Review Bot",
@@ -153,16 +146,16 @@ These prevent runaway costs from chatty webhooks or infinite loops.
 
 ```bash
 # List all triggers
-uv run --package syn-cli syn triggers list
+curl -sf http://localhost:8137/api/v1/triggers
 
 # Pause a trigger (stops firing but keeps config)
-uv run --package syn-cli syn triggers pause <trigger-id>
+curl -sf -X POST http://localhost:8137/api/v1/triggers/<trigger-id>/pause
 
 # Resume a paused trigger
-uv run --package syn-cli syn triggers resume <trigger-id>
+curl -sf -X POST http://localhost:8137/api/v1/triggers/<trigger-id>/resume
 
 # Delete permanently
-uv run --package syn-cli syn triggers delete <trigger-id>
+curl -sf -X DELETE http://localhost:8137/api/v1/triggers/<trigger-id>
 ```
 
 ### Supported GitHub Events
@@ -228,13 +221,17 @@ just seed-all         # Seed everything
 4. Check conditions — might not match the webhook payload
 5. Check `cooldown_seconds` — too recent since last fire
 6. Check installation — GitHub App might be revoked
-7. Check webhook delivery — `just dev-webhooks-logs` for Smee issues
+7. Check webhook delivery — selfhost: check Cloudflare tunnel status; dev: `just dev-webhooks-logs` for Smee issues
 
 ### "How do I test triggers locally?"
 
-1. Start the dev stack: `just dev` (includes webhook proxy)
-2. Verify webhooks are being delivered: `just dev-webhooks-logs`
+1. Start the stack:
+   - Published path: `cd ~/.syntropic137 && ./syn-ctl up`
+   - Source repo: `just dev` (includes webhook proxy)
+2. Verify webhooks are being delivered:
+   - Selfhost: check Cloudflare tunnel status in Zero Trust dashboard
+   - Dev: `just dev-webhooks-logs`
 3. Create a trigger pointing to a test workflow
 4. Open a PR on the target repo — watch the execution start
-5. Record webhooks for replay: `just dev-record-webhooks`
-6. Replay later: `just replay-webhooks`
+5. (Source repo only) Record webhooks for replay: `just dev-record-webhooks`
+6. (Source repo only) Replay later: `just replay-webhooks`
