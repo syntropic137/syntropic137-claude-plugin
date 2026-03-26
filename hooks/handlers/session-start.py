@@ -30,7 +30,7 @@ def main() -> int:
             "title": "Syntropic137 API unreachable",
             "message": (
                 f"Could not connect to {HEALTH_ENDPOINT}. "
-                "Run /syn-setup for guided bootstrap or `just dev` to start the stack."
+                "Run /syn-setup for guided setup or check your stack with /syn-status."
             ),
             "level": "warning",
         }

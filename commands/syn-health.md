@@ -5,17 +5,42 @@ allowed-tools: Bash
 
 # /syn-health — API Health Check
 
+First, resolve the API URL:
+
+```bash
+if [ -n "${SYN_API_URL:-}" ]; then
+    SYN_API_URL="$SYN_API_URL"
+elif [ -f "$HOME/.syntropic137/.env" ]; then
+    _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+    if [ -n "$_hostname" ]; then
+        SYN_API_URL="https://$_hostname"
+    fi
+fi
+SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
+```
+
 Run the health check:
 
 ```bash
-uv run --package syn-cli syn health
+curl -sf "$SYN_API_URL/health"
 ```
 
-If the command succeeds, display the health response.
+If the command succeeds, display the health response JSON.
 
 If it fails (non-zero exit or connection error):
 1. Check if Docker is running: `docker info >/dev/null 2>&1`
-2. Check if the API container is running: `docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps api --format "table {{.Name}}\t{{.Status}}" 2>/dev/null`
-3. If the container exists but API is unhealthy, suggest: `just dev-logs` to check logs
-4. If no containers are running, suggest: `just dev` to start the stack
+2. Detect the installation path and check container status:
+   ```bash
+   if [ -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ]; then
+       docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null
+   elif [ -f "docker/docker-compose.yaml" ]; then
+       docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null
+   fi
+   ```
+3. If the container exists but API is unhealthy, suggest checking logs:
+   - Published path (`~/.syntropic137/`): `cd ~/.syntropic137 && ./syn-ctl logs`
+   - Source repo: `just dev-logs`
+4. If no containers are running, suggest starting the stack:
+   - Published path: `cd ~/.syntropic137 && ./syn-ctl up` or `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml up -d`
+   - Source repo: `just selfhost-up` or `just dev`
 5. If Docker itself is not running, suggest starting Docker Desktop

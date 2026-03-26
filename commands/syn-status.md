@@ -5,28 +5,50 @@ allowed-tools: Bash
 
 # /syn-status — Composite Platform Status
 
+First, resolve the API URL:
+
+```bash
+if [ -n "${SYN_API_URL:-}" ]; then
+    SYN_API_URL="$SYN_API_URL"
+elif [ -f "$HOME/.syntropic137/.env" ]; then
+    _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+    if [ -n "$_hostname" ]; then
+        SYN_API_URL="https://$_hostname"
+    fi
+fi
+SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
+```
+
 Run the following three checks and present a unified status view:
 
 ## 1. Container Status
 
+Detect the installation path and check containers:
+
 ```bash
-docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null
+if [ -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ]; then
+    docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null
+elif [ -f "docker/docker-compose.yaml" ]; then
+    docker compose -f docker/docker-compose.yaml -f docker/docker-compose.dev.yaml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null
+fi
 ```
 
-If Docker is not running or no containers exist, note that the stack is down and suggest `just dev`.
+If Docker is not running or no containers exist, note that the stack is down and suggest:
+- Published path (`~/.syntropic137/`): `cd ~/.syntropic137 && ./syn-ctl up`
+- Source repo: `just selfhost-up` or `just dev`
 
 ## 2. API Health
 
 ```bash
-uv run --package syn-cli syn health
+curl -sf "$SYN_API_URL/health"
 ```
 
-If the API is unreachable, note it and suggest checking container status or running `just dev`.
+If the API is unreachable, note it and suggest checking container status or starting the stack.
 
 ## 3. Recent Activity
 
 ```bash
-uv run --package syn-cli syn metrics show
+curl -sf "$SYN_API_URL/api/v1/metrics"
 ```
 
 ## Presentation
