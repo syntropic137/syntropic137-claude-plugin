@@ -17,7 +17,7 @@ Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, k
 >    claude plugin marketplace add syntropic137/syntropic137-claude-plugin
 >    claude plugin install syntropic137
 >    ```
-> 2. Run `/syn-setup` — it will detect the environment, report what's missing, and walk the user through every step (cloning the repo, installing prerequisites, configuring secrets, starting the stack).
+> 2. Run `/syn-setup` — it checks Docker, pulls pre-built images, and walks the user through configuration (secrets, optional features).
 > 3. That's it. `/syn-setup` handles everything from here.
 
 ## Installation
@@ -37,11 +37,15 @@ claude plugin install ./lib/syntropic137-claude-plugin --scope project
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
-- [uv](https://docs.astral.sh/uv/) — Python package manager
-- [just](https://github.com/casey/just) — task runner
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with Compose >= 2.20)
 
-Don't worry about remembering these — `/syn-setup` checks everything for you.
+That's it. Contributors to the source repo also need [uv](https://docs.astral.sh/uv/), [just](https://github.com/casey/just), and Git.
+
+## Updating
+
+```bash
+claude plugin update syntropic137
+```
 
 ## Getting Started
 
@@ -49,7 +53,9 @@ Don't worry about remembering these — `/syn-setup` checks everything for you.
 /syn-setup
 ```
 
-That's it. The setup wizard detects your environment, reports what's working and what's missing, then walks you through fixing each issue step by step.
+The setup wizard checks Docker, downloads pre-built images, and walks you
+through configuration. Pick which features to enable (GitHub App, Cloudflare,
+1Password) and add more later — just run `/syn-setup` again.
 
 ## Commands
 
@@ -65,13 +71,16 @@ That's it. The setup wizard detects your environment, reports what's working and
 
 ## Managing Your Stack
 
-Beyond setup, Claude knows how to manage the full lifecycle. Just ask:
+**Published path** (`~/.syntropic137/`):
+- `./syn-ctl status` — service health
+- `./syn-ctl logs [service]` — tail logs
+- `./syn-ctl up` / `./syn-ctl down` — start/stop
+- `./syn-ctl update` — pull latest images
 
-- *"Stop the stack"* → `just selfhost-down`
-- *"Show me the logs"* → `just selfhost-logs`
-- *"Check if everything is healthy"* → `just selfhost-status`
-- *"Update to the latest version"* → `just selfhost-update`
-- *"Start everything back up"* → `just selfhost-up-tunnel`
+**Source repo** (contributors):
+- `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
+
+Or just ask Claude — it knows both paths.
 
 ## How It Works
 
@@ -91,8 +100,8 @@ Skills give Claude deep understanding of the system. They're automatically loade
 | **execution-control** | Running workflows (`--task`), monitoring progress, control plane (pause/resume/cancel/inject), Processor To-Do List internals, troubleshooting failures. |
 | **observability** | Sessions, tool timelines, token metrics, cost breakdowns. Two-lane architecture. How to interpret "why was this expensive?" or "why did this fail?" |
 | **organization** | Org→System→Repo hierarchy, cost rollup, health monitoring, contribution heatmaps. |
-| **github-automation** | GitHub App setup, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs, Smee/Cloudflare webhook delivery. |
-| **setup** | 14-stage onboarding wizard, 1Password vault integration, Cloudflare tunnels, Docker Compose variants, 100+ justfile recipes, secrets management, troubleshooting. |
+| **github-automation** | GitHub App setup, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs, Cloudflare webhook delivery. |
+| **setup** | Onboarding wizard with feature selection, published-container deployment, 1Password vault integration, Cloudflare tunnels, Docker Compose variants, secrets management, troubleshooting. |
 | **platform-ops** | Service map with ports, workspace management, token injection security (Envoy proxy), QA/testing commands, infrastructure troubleshooting recipes. |
 
 ### What this means in practice

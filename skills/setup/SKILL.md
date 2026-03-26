@@ -7,9 +7,54 @@ description: Syntropic137 platform setup — 14-stage onboarding wizard, 1Passwo
 
 Use this knowledge when the user asks about setting up the platform, configuring secrets, managing the Docker stack, understanding the justfile recipes, or troubleshooting infrastructure issues.
 
+## API URL — `SYN_API_URL`
+
+The platform can run locally or behind a public hostname (Cloudflare tunnel, VPS, etc.). All API calls should use `SYN_API_URL` as the base URL, resolved with this priority:
+
+| Priority | Source | Example |
+|----------|--------|---------|
+| 1 | `SYN_API_URL` env var (explicit override) | `https://syn.example.com` |
+| 2 | `SYN_PUBLIC_HOSTNAME` from `~/.syntropic137/.env` | → `https://syn.example.com` |
+| 3 | Default | `http://localhost:8137` |
+
+**Resolution pattern (bash):**
+```bash
+if [ -n "${SYN_API_URL:-}" ]; then
+    SYN_API_URL="$SYN_API_URL"
+elif [ -f "$HOME/.syntropic137/.env" ]; then
+    _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+    [ -n "$_hostname" ] && SYN_API_URL="https://$_hostname"
+fi
+SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
+```
+
+**All API endpoints are relative to this base URL:**
+- Health: `$SYN_API_URL/health`
+- Sessions: `$SYN_API_URL/api/v1/sessions`
+- Costs: `$SYN_API_URL/api/v1/costs/summary`
+- Metrics: `$SYN_API_URL/api/v1/metrics`
+- Events: `$SYN_API_URL/api/v1/events/sessions/<id>`
+- Triggers: `$SYN_API_URL/api/v1/triggers`
+
+Every plugin command resolves this before making API calls. If the user is on a remote server, `SYN_PUBLIC_HOSTNAME` gets set during Cloudflare tunnel setup (Phase 8 of `/syn-setup`).
+
 ## Onboarding Paths
 
-### Quick Dev Setup
+### Published Path (Self-Hosters)
+
+Self-hosters install to `~/.syntropic137/` and use `syn-ctl` for management. No `uv`, `just`, or source repo required.
+
+```bash
+cd ~/.syntropic137
+./syn-ctl up                  # Start the stack
+./syn-ctl down                # Stop the stack
+./syn-ctl logs [service]      # View logs
+./syn-ctl update              # Pull latest images and restart
+```
+
+The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. All stack management goes through `syn-ctl` or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
+
+### Quick Dev Setup (Source Repo)
 
 ```bash
 just onboard-dev              # Default: submodules → deps → GitHub App → stack
@@ -28,7 +73,7 @@ just onboard-dev --1password  # Include 1Password secret management
 7. Wait for workspace build
 8. Start full dev stack (`just dev`)
 
-### Full Selfhost Setup
+### Full Selfhost Setup (Source Repo)
 
 ```bash
 just onboard                  # Interactive wizard (14 stages)
@@ -41,10 +86,10 @@ just onboard --stage <name>   # Re-run a specific stage
 
 | # | Stage | What It Does | Can Re-run? |
 |---|-------|-------------|-------------|
-| 1 | `detect_environment` | Choose: development, beta, staging, production | Yes |
-| 2 | `check_prerequisites` | Validate Docker ≥24, Compose ≥2.20, Python ≥3.12, uv, just, git | Yes |
+| 1 | `detect_environment` | Choose: development, selfhost, beta, staging, production | Yes |
+| 2 | `check_prerequisites` | Validate Docker ≥24, Compose ≥2.20, Python ≥3.12; uv/just/git for source repo only | Yes |
 | 3 | `init_submodules` | `git submodule update --init --recursive` | Yes |
-| 4 | `generate_secrets` | Create `db-password.txt`, `redis-password.txt` (32-byte hex) | Yes |
+| 4 | `generate_secrets` | Create `db-password.secret`, `redis-password.secret` (32-byte hex) | Yes |
 | 5 | `configure_1password` | Optional: set up 1Password vault integration | Yes |
 | 6 | `validate_environment` | Audit all env vars, show status table | Yes |
 | 7 | `configure_cloudflare` | Cloudflare tunnel token + domain for external access | Yes |
@@ -71,7 +116,7 @@ Re-run any stage: `just setup-stage <stage_name>`
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `APP_ENVIRONMENT` | Yes | `development`, `beta`, `staging`, `production` |
+| `APP_ENVIRONMENT` | Yes | `development`, `selfhost`, `beta`, `staging`, `production` |
 | `SYN_GITHUB_APP_ID` | For GitHub | GitHub App ID |
 | `SYN_GITHUB_APP_NAME` | For GitHub | GitHub App slug |
 | `SYN_GITHUB_PRIVATE_KEY` | For GitHub | Base64-encoded PEM private key |
@@ -153,7 +198,7 @@ Zero-trust external access — webhooks from GitHub, remote dashboard access, AP
 ## Secrets Management
 
 ```bash
-just secrets-generate   # Create db-password.txt, redis-password.txt
+just secrets-generate   # Create db-password.secret, redis-password.secret
 just secrets-check      # Verify all secrets exist
 just secrets-rotate     # Regenerate all secrets (requires restart)
 just secrets-seal       # Encrypt with passphrase (safe to commit .enc files)
@@ -163,10 +208,10 @@ just secrets-unseal     # Decrypt from .enc files
 ### Secret Files
 
 Located in `infra/docker/secrets/`:
-- `db-password.txt` (32-byte hex, permissions 600)
-- `redis-password.txt` (32-byte hex, permissions 600)
+- `db-password.secret` (32-byte hex, permissions 600)
+- `redis-password.secret` (32-byte hex, permissions 600)
 - `github-private-key.pem` (optional, base64 in .env preferred)
-- `cloudflare-tunnel-token.txt` (if using tunnel)
+- `cloudflare-tunnel-token.secret` (if using tunnel)
 
 ## Docker Compose Stack
 
