@@ -1,6 +1,6 @@
 {
   "name": "syntropic137",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Syntropic137 platform plugin — setup, observe, and operate your AI agent workflow engine from Claude Code",
   "author": { "name": "Syntropic137" },
   "homepage": "https://github.com/syntropic137/syntropic137",
