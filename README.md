@@ -37,10 +37,9 @@ claude plugin install ./lib/syntropic137-claude-plugin --scope project
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
 - [uv](https://docs.astral.sh/uv/) — Python package manager
 - [just](https://github.com/casey/just) — task runner
-- [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) — for the dashboard
 
 Don't worry about remembering these — `/syn-setup` checks everything for you.
 
@@ -63,6 +62,16 @@ That's it. The setup wizard detects your environment, reports what's working and
 | `/syn-sessions [list \| show <id>]` | Session listing and details |
 | `/syn-metrics [--workflow <id>]` | Aggregated metrics |
 | `/syn-observe <session-id> [events \| tools \| errors]` | Observability data |
+
+## Managing Your Stack
+
+Beyond setup, Claude knows how to manage the full lifecycle. Just ask:
+
+- *"Stop the stack"* → `just selfhost-down`
+- *"Show me the logs"* → `just selfhost-logs`
+- *"Check if everything is healthy"* → `just selfhost-status`
+- *"Update to the latest version"* → `just selfhost-update`
+- *"Start everything back up"* → `just selfhost-up-tunnel`
 
 ## How It Works
 
@@ -97,15 +106,37 @@ Instead of memorizing CLI commands, just tell Claude what you want:
 - *"Help me set up 1Password for secrets"* → Claude uses setup skill
 - *"How do I deploy with Cloudflare tunnel?"* → Claude uses setup skill
 
+---
+
 ## Development
 
-This plugin is developed as a submodule at `lib/syntropic137-claude-plugin` in the [syntropic137](https://github.com/syntropic137/syntropic137) monorepo. To work on it:
+This plugin is developed as a submodule at `lib/syntropic137-claude-plugin` in the [syntropic137](https://github.com/syntropic137/syntropic137) monorepo.
+
+### Plugin Structure
+
+```
+syntropic137-claude-plugin/
+├── commands/           # Slash commands (markdown → /syn-setup, /syn-status, etc.)
+├── skills/             # Domain knowledge (SKILL.md files, loaded contextually)
+├── hooks/              # Session-start connectivity check
+└── .claude-plugin/
+    └── plugin.json     # Version + metadata (bump on every content change)
+```
+
+### Additional Prerequisites (Development)
+
+- [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) — for the dashboard frontend
+- Use `just onboard-dev` (not `just onboard`) for local development setup
+
+### Working on the Plugin
 
 ```bash
 cd lib/syntropic137-claude-plugin
-# Make changes
-# Test with: claude plugin install . --scope project
+# Make changes, then test locally:
+claude plugin install . --scope project
 ```
+
+**Important:** Bump the `version` in `.claude-plugin/plugin.json` on every content change — Claude Code uses the version field to detect plugin updates and will serve a cached copy otherwise.
 
 ## License
 
