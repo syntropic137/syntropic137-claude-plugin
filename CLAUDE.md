@@ -35,6 +35,29 @@ git push origin main
 # → CI tags v0.5.2 automatically
 ```
 
+## Updating the Plugin (User-Side)
+
+The plugin is published as `syntropic137@syntropic137` (plugin name `@` marketplace org).
+
+```bash
+# 1. Refresh the marketplace catalog
+claude plugin marketplace update syntropic137
+
+# 2. Update the plugin to the latest version
+claude plugin update syntropic137@syntropic137
+```
+
+First-time install:
+
+```bash
+claude plugin marketplace add syntropic137
+claude plugin install syntropic137@syntropic137
+```
+
+## Hooks
+
+`hooks/hooks.json` is **loaded automatically** by Claude Code — do NOT reference it in `plugin.json`. Only add a `"hooks"` field to `plugin.json` if you have a *second* hooks file at a non-standard path.
+
 ## Scratch files
 
 Root-level `.md` files (except `README.md`, `CLAUDE.md`) are scratch — never commit them.
