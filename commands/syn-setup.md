@@ -162,18 +162,19 @@ This sets up your self-hosted AI agent orchestration platform. Here is what is i
 - LLM API key -- you will be prompted (agents need this to run)
 - Pull and start -- pre-built images on localhost:8137
 
+**REQUIRED:**
+
+**GitHub App** -- *required for agents to interact with GitHub*
+Creates a private bot for your GitHub repos. Enables pushing code, creating PRs, code review, and webhook-triggered workflows. Setup: ~2 min via one-click manifest flow.
+Requires: GitHub account (free).
+
 **OPTIONAL FEATURES:**
 
-**[1] GitHub App** -- *almost required*
-Creates a private bot for your GitHub repos. Enables automated code review and PR-triggered workflows. Without this, workflows run manually only.
-Requires: GitHub account (free). Setup: ~2 min via one-click manifest flow.
-
-**[2] Cloudflare Tunnel** -- *recommended*
+**[1] Cloudflare Tunnel** -- *recommended*
 Gives your instance a public URL for GitHub webhooks. Required for auto-triggering workflows on push/PR. Without this, manual runs only and dashboard on localhost only.
 Requires: Cloudflare account + domain ($10-15/yr if buying new). Setup: ~5 min.
-Note: requires GitHub App [1] for webhook triggers.
 
-**[3] 1Password** -- *recommended*
+**[2] 1Password** -- *recommended*
 Backs up all secrets to 1Password. Restore on a new machine in minutes.
 Requires: 1Password app + `op` CLI (any plan -- personal works). Setup: ~1 min.
 
@@ -181,15 +182,14 @@ Requires: 1Password app + `op` CLI (any plan -- personal works). Setup: ~1 min.
 
 Ask the user:
 
-> Select features to set up: [1,2,3 / all / none] (default: all)
+> Select optional features to set up: [1,2 / all / none] (default: all)
 
 Parse the response:
-- `all` or empty/Enter: enable all three
-- `none`: skip all optional features
-- `1,2` or `1 2` or `1, 3`, etc.: enable the listed features
-- `2` alone: auto-select `1` as well, and tell the user: *"GitHub App auto-selected -- required for Cloudflare webhook triggers."*
+- `all` or empty/Enter: enable both optional features
+- `none`: skip optional features (GitHub App still set up)
+- `1` or `2` or `1,2`: enable the listed features
 
-Store the selections for use in later phases. Any feature can be added later by running `/syn-setup` again.
+Store the selections for use in later phases. Optional features can be added later by running `/syn-setup` again.
 
 ---
 
@@ -237,9 +237,9 @@ Tell the user:
 
 ---
 
-## Phase 7 — GitHub App (if selected)
+## Phase 7 — GitHub App
 
-**Only run this phase if the user selected feature [1] (or [2], which implies [1]).**
+**Always run this phase — GitHub App is required for agents to interact with GitHub.**
 
 Tell the user:
 
@@ -292,7 +292,7 @@ If any `.env` key does not already exist as a placeholder, append it instead of 
 
 ## Phase 8 — Cloudflare Tunnel (if selected)
 
-**Only run this phase if the user selected feature [2].**
+**Only run this phase if the user selected optional feature [1].**
 
 Tell the user:
 
@@ -333,7 +333,7 @@ If any `.env` key does not already exist as a placeholder, append it instead of 
 
 ## Phase 9 — 1Password Backup (if selected)
 
-**Only run this phase if the user selected feature [3].**
+**Only run this phase if the user selected optional feature [2].**
 
 Check if the `op` CLI is available and signed in:
 
