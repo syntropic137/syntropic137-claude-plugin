@@ -165,13 +165,15 @@ This sets up your self-hosted AI agent orchestration platform. Here is what is i
 **REQUIRED:**
 
 **GitHub App** -- *required for agents to interact with GitHub*
-Creates a private bot for your GitHub repos. Enables pushing code, creating PRs, code review, and webhook-triggered workflows. Setup: ~2 min via one-click manifest flow.
+Creates a private bot for your GitHub repos. Enables pushing code, creating PRs, code review, and webhook-triggered workflows. Setup: ~3 min (manual form).
 Requires: GitHub account (free).
+*Note: if you select Cloudflare Tunnel, that will be configured first — you need the public URL before filling in the GitHub App webhook field.*
 
 **OPTIONAL FEATURES:**
 
 **[1] Cloudflare Tunnel** -- *recommended*
 Gives your instance a public URL for GitHub webhooks. Required for auto-triggering workflows on push/PR. Without this, manual runs only and dashboard on localhost only.
+**Set up before GitHub App** — the tunnel hostname is used as the webhook URL.
 Requires: Cloudflare account + domain ($10-15/yr if buying new). Setup: ~5 min.
 
 **[2] 1Password** -- *recommended*
@@ -195,27 +197,35 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ## Phase 5 — API Key
 
-Ask the user for their Anthropic API key:
+Agents need an LLM API key to run. Tell the user:
 
-> Agents need an LLM provider to run. Please provide your Anthropic API key.
+> Agents need an LLM provider to run. I will NOT ask you to paste the key into this chat — that would expose it in conversation history.
 >
-> You can get one at https://console.anthropic.com/settings/keys
+> Instead, run this command in your terminal (the `!` prefix runs it in your shell without showing the value here):
 >
-> Alternatively, if you use Claude Code with OAuth, you can set `CLAUDE_CODE_OAUTH_TOKEN` instead.
+> **For Anthropic API key:**
+> ```
+> ! read -rsp "ANTHROPIC_API_KEY: " _syn_key && printf '\n' && sed -i.bak "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$_syn_key|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Key saved."
+> ```
 >
-> Paste your ANTHROPIC_API_KEY:
+> **Alternatively, if you use Claude Code with OAuth token:**
+> ```
+> ! read -rsp "CLAUDE_CODE_OAUTH_TOKEN: " _syn_key && printf '\n' && sed -i.bak "s|^CLAUDE_CODE_OAUTH_TOKEN=.*|CLAUDE_CODE_OAUTH_TOKEN=$_syn_key|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."
+> ```
+>
+> You can get an API key at https://console.anthropic.com/settings/keys
+>
+> Tell me when it is done and I will verify.
 
-Write the key to `.env`:
+After the user confirms, verify the key was written (without revealing it):
 
 ```bash
-# Use sed to replace the placeholder in .env (from the example file)
-sed -i.bak "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${API_KEY}|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
+grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
+  grep -q 'CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
+  echo "key:missing"
 ```
 
-If the user provides an OAuth token instead, write `CLAUDE_CODE_OAUTH_TOKEN` to `.env`.
-
-**Do NOT echo the key back to the user or include it in any output.**
+**Never ask the user to paste a key or token into the chat. Never echo or log the value.**
 
 ---
 
@@ -237,66 +247,15 @@ Tell the user:
 
 ---
 
-## Phase 7 — GitHub App
-
-**Always run this phase — GitHub App is required for agents to interact with GitHub.**
-
-Tell the user:
-
-> Setting up your GitHub App. This creates a private bot that connects to your repos.
->
-> I will open the GitHub App manifest flow in your browser. Click "Create GitHub App" on the page -- it is a one-click setup that pre-fills all the right permissions and webhook URLs.
-
-Construct and open the manifest flow URL:
-
-```bash
-open "https://github.com/settings/apps/new?manifest_url=https://github.com/syntropic137/syntropic137/blob/main/infra/github-app-manifest.json" 2>/dev/null || \
-  echo "Please open this URL in your browser: https://github.com/settings/apps/new"
-```
-
-Then ask the user for the details:
-
-> After creating the app, GitHub shows you the app settings page. I need a few values from there:
->
-> 1. **App ID** (shown at the top of the General settings page)
-> 2. **App name** (the name you chose or was generated)
-> 3. **Webhook secret** (if you set one -- or I can generate one)
-> 4. **Private key** -- click "Generate a private key" on the settings page. It downloads a `.pem` file. Tell me the path to that file (e.g., `~/Downloads/my-app.2026-03-26.private-key.pem`).
-
-Collect each value from the user. For the webhook secret, if the user does not have one, generate it:
-
-```bash
-openssl rand -hex 20
-```
-
-For the private key, copy it to the secrets directory:
-
-```bash
-cp "<user-provided-path>" "$HOME/.syntropic137/secrets/github-app-private-key.pem"
-chmod 600 "$HOME/.syntropic137/secrets/github-app-private-key.pem"
-```
-
-Write all GitHub App values to `.env`:
-
-```bash
-sed -i.bak "s|^SYN_GITHUB_APP_ID=.*|SYN_GITHUB_APP_ID=${APP_ID}|" "$HOME/.syntropic137/.env"
-sed -i.bak "s|^SYN_GITHUB_APP_NAME=.*|SYN_GITHUB_APP_NAME=${APP_NAME}|" "$HOME/.syntropic137/.env"
-sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=${WEBHOOK_SECRET}|" "$HOME/.syntropic137/.env"
-sed -i.bak "s|^SYN_GITHUB_APP_PRIVATE_KEY_PATH=.*|SYN_GITHUB_APP_PRIVATE_KEY_PATH=/run/secrets/github-app-private-key.pem|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
-```
-
-If any `.env` key does not already exist as a placeholder, append it instead of using sed.
-
----
-
-## Phase 8 — Cloudflare Tunnel (if selected)
+## Phase 7 — Cloudflare Tunnel (if selected)
 
 **Only run this phase if the user selected optional feature [1].**
 
+> **Why Cloudflare comes before GitHub App:** The GitHub App webhook URL must point to your public hostname. Set up the tunnel first so you have the URL ready to enter when creating the GitHub App.
+
 Tell the user:
 
-> Setting up a Cloudflare tunnel to give your instance a public URL.
+> Setting up a Cloudflare tunnel to give your instance a public URL. We do this before the GitHub App so you have the webhook URL ready.
 >
 > 1. Open the Cloudflare Zero Trust dashboard:
 >    https://dash.cloudflare.com/?to=/:account/tunnels
@@ -311,19 +270,106 @@ Tell the user:
 >
 > 5. On the "Install and run connectors" step, copy the tunnel token (the long string after `--token`)
 
-Ask the user:
+Ask the user for the tunnel token using a terminal command (same reason as API key — avoid pasting secrets into chat):
 
-> Paste your Cloudflare tunnel token:
+> Run this in your terminal to save the tunnel token without exposing it in the chat:
+> ```
+> ! read -rsp "Cloudflare tunnel token: " _syn_tok && printf '\n' && sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."
+> ```
 
-Then ask:
+Then ask (this is not a secret, safe to type here):
 
 > What is the public hostname you configured? (e.g., `syn.yourdomain.com`)
 
-Write both values to `.env`:
+Write the hostname to `.env`:
 
 ```bash
-sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=${TUNNEL_TOKEN}|" "$HOME/.syntropic137/.env"
 sed -i.bak "s|^SYN_PUBLIC_HOSTNAME=.*|SYN_PUBLIC_HOSTNAME=${PUBLIC_HOSTNAME}|" "$HOME/.syntropic137/.env"
+rm -f "$HOME/.syntropic137/.env.bak"
+```
+
+If the key does not already exist as a placeholder, append it instead of using sed.
+
+Read back the configured hostname for use in the next phase:
+
+```bash
+grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" | cut -d= -f2 | tr -d '"' | tr -d "'"
+```
+
+---
+
+## Phase 8 — GitHub App
+
+**Always run this phase — GitHub App is required for agents to interact with GitHub.**
+
+Read the public hostname if Cloudflare was configured (empty string if not):
+
+```bash
+_syn_webhook_host=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+```
+
+If `_syn_webhook_host` is set, the webhook URL will be `https://${_syn_webhook_host}/api/v1/github/webhook`. If not set, webhooks will only work locally.
+
+Tell the user:
+
+> Setting up your GitHub App. This creates a private bot that connects to your repos.
+>
+> I will open the GitHub App creation page in your browser. You will need to fill in a few fields:
+>
+> - **GitHub App name:** choose any unique name (e.g., `syntropic137-yourname`)
+> - **Homepage URL:** `http://localhost:8137` (or your public URL if you have one)
+> - **Webhook URL:** `https://<your-public-hostname>/api/v1/github/webhook`
+>   *(shown above if Cloudflare was configured)*
+> - **Webhook secret:** I will generate one for you — see below
+
+Generate the webhook secret first, before opening the browser, so the user has it ready:
+
+```bash
+openssl rand -hex 20
+```
+
+Show the generated secret to the user and tell them:
+
+> Copy this webhook secret — you will paste it into the GitHub App creation form under "Webhook secret":
+> `<generated-secret>`
+>
+> Keep it — I will also save it to `.env` automatically.
+
+Save the webhook secret immediately:
+
+```bash
+sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=${WEBHOOK_SECRET}|" "$HOME/.syntropic137/.env"
+rm -f "$HOME/.syntropic137/.env.bak"
+```
+
+Open the GitHub App creation page:
+
+```bash
+open "https://github.com/settings/apps/new" 2>/dev/null || \
+  echo "Please open this URL in your browser: https://github.com/settings/apps/new"
+```
+
+After the user creates the app, ask for the details:
+
+> After creating the app, GitHub shows you the app settings page. I need two values from there:
+>
+> 1. **App ID** (shown at the top of the General settings page)
+> 2. **App name** (the name you entered)
+> 3. **Private key** — click "Generate a private key" on the settings page. It downloads a `.pem` file. Tell me the path to that file (e.g., `~/Downloads/my-app.2026-03-26.private-key.pem`).
+
+For the private key, copy it to the secrets directory:
+
+```bash
+cp "<user-provided-path>" "$HOME/.syntropic137/secrets/github-app-private-key.pem"
+chmod 600 "$HOME/.syntropic137/secrets/github-app-private-key.pem"
+```
+
+Write App ID and name to `.env`:
+
+```bash
+sed -i.bak "s|^SYN_GITHUB_APP_ID=.*|SYN_GITHUB_APP_ID=${APP_ID}|" "$HOME/.syntropic137/.env"
+sed -i.bak "s|^SYN_GITHUB_APP_NAME=.*|SYN_GITHUB_APP_NAME=${APP_NAME}|" "$HOME/.syntropic137/.env"
+sed -i.bak "s|^SYN_GITHUB_APP_PRIVATE_KEY_PATH=.*|SYN_GITHUB_APP_PRIVATE_KEY_PATH=/run/secrets/github-app-private-key.pem|" "$HOME/.syntropic137/.env"
 rm -f "$HOME/.syntropic137/.env.bak"
 ```
 
