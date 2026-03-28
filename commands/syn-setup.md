@@ -144,7 +144,7 @@ Write the version tag to a metadata file for later use:
 echo "$LATEST_TAG" > "$HOME/.syntropic137/.version"
 ```
 
-Create a helper script for setting secrets securely (so users never have to copy-paste shell one-liners):
+Create a helper script for setting secrets programmatically (used for headless/scripted installs outside Claude Code — the primary setup flow uses the editor instead):
 
 ```bash
 cat > "$HOME/.syntropic137/set-secret.sh" << 'SCRIPT_EOF'
@@ -349,9 +349,10 @@ On Linux with nano, add: *(nano: `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit
 
 > Let me know when done.
 
-After the user confirms, verify the key was written (without revealing it):
+After the user confirms, enforce permissions and verify the key was written (without revealing it):
 
 ```bash
+chmod 600 "$HOME/.syntropic137/.env"
 grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
   grep -q 'CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
   echo "key:missing"
@@ -428,12 +429,20 @@ Now have the user save the tunnel token and hostname. Open the `.env` file:
 >
 > Save and close the file.
 
-After the user confirms, verify both values were set and read back the hostname for use in the next phase:
+After the user confirms, enforce permissions, verify both values, and read back the hostname for confirmation:
 
 ```bash
+chmod 600 "$HOME/.syntropic137/.env"
 grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
-grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'"
+_syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+echo "hostname:${_syn_hostname}"
 ```
+
+If the hostname was detected, echo it back for confirmation:
+
+> I detected your public hostname as `<hostname>` — is that correct?
+
+This catches typos before the value is used as the GitHub App webhook URL in Phase 8.
 
 ---
 

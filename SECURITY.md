@@ -4,7 +4,7 @@ This plugin handles API keys, tokens, and private keys during setup. Every secre
 
 ## Core Principles
 
-1. **Secrets stay in the shell.** All credential input uses the `!` prefix (Claude Code external execution) with `read -rsp` (silent prompt). The value goes straight to a file — Claude never sees it.
+1. **Secrets stay in the user's editor.** Credential input opens `.env` in the user's text editor via `!` prefix (`open -t` on macOS, `$EDITOR` on Linux). The user pastes secrets directly into the file. Claude never sees the values — only runs `grep -q` to confirm a key was set. The `set-secret.sh` helper is available for headless/scripted installs outside Claude Code.
 2. **Private keys are paths, not content.** The user provides a file path to their `.pem`; the plugin moves it to `~/.syntropic137/secrets/` with `chmod 600` and deletes the original from Downloads. The adapter reads the raw `.pem` directly — no encoding step needed. The key is never read into context.
 3. **Generated secrets go to files or clipboard.** `openssl rand` output is redirected to files or piped to `pbcopy` — never echoed to the conversation.
 4. **Verification is status-only.** Checks use `grep -q` and return "set/missing" — never the actual value.
@@ -15,9 +15,9 @@ This plugin handles API keys, tokens, and private keys during setup. Every secre
 
 | Phase | Secret | Method | Context-safe? |
 |-------|--------|--------|---------------|
-| 5 — API Key | `ANTHROPIC_API_KEY` | `! read -rsp` → `sed` to `.env` | Yes |
+| 5 — API Key | `ANTHROPIC_API_KEY` | `! open -t` / `! $EDITOR` → user edits `.env` directly | Yes |
 | 6 — Infra secrets | DB, Redis, MinIO passwords | `openssl rand -hex 32 >` file | Yes |
-| 7 — Cloudflare | `CLOUDFLARE_TUNNEL_TOKEN` | `! read -rsp` → auto-extract `eyJ...` token → `sed` to `.env` | Yes |
+| 7 — Cloudflare | `CLOUDFLARE_TUNNEL_TOKEN` | `! open -t` / `! $EDITOR` → user edits `.env` directly | Yes |
 | 8 — GitHub App | Webhook secret | `! openssl rand -hex 20` → clipboard + `sed` to `.env` | Yes |
 | 8 — GitHub App | Private key `.pem` | `mv` to secrets dir, `chmod 600`, original deleted from Downloads | Yes |
 | 9 — 1Password | All secrets | Python reads disk → stdin pipe to `op` | Yes |
@@ -62,7 +62,7 @@ The adapter in the main syntropic137 repo reads the raw `.pem` directly via `dec
 
 | Threat | Mitigation |
 |--------|------------|
-| Secret in Claude's context window | `!` prefix, file-only I/O, `grep -q` verification |
+| Secret in Claude's context window | `!` prefix opens editor, file-only I/O, `grep -q` verification |
 | Secret in process list (`ps aux`) | stdin piping, never CLI args |
 | Secret on disk with wrong perms | `chmod 600` on all secret files |
 | Secret lost after setup | 1Password backup (Phase 9) |
