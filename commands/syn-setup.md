@@ -409,21 +409,31 @@ Tell the user:
 > Setting up a Cloudflare tunnel to give your instance a public URL. We do this before the GitHub App so you have the webhook URL ready.
 >
 > 1. Open the Cloudflare Zero Trust dashboard:
->    https://dash.cloudflare.com/?to=/:account/tunnels
+>    https://dash.cloudflare.com/?to=/:account/networks-tunnels
 >
-> 2. Click "Create a tunnel" and choose "Cloudflared"
+> 2. Click **"Create a tunnel"** and choose **"Cloudflared"**
 >
 > 3. Name it something like `syntropic137`
 >
-> 4. In the "Route tunnel" step, configure:
->    - **Public hostname:** choose your subdomain (e.g., `syn.yourdomain.com`)
->    - **Service:** `http://localhost:8137`
->
-> 5. On the "Install and run connectors" step, Cloudflare shows an install command like:
+> 4. On the **"Install and run connectors"** step, Cloudflare shows an install command like:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **full install command** that Cloudflare shows you — you do NOT need to extract the token yourself. Paste the whole thing.
+>    Copy the **full command** — you do NOT need to extract the token yourself.
+>
+> 5. **Don't wait for the connector to connect.** The wizard won't let you proceed to routes from here. Instead, go back to **Networks > Tunnels** in the sidebar.
+>
+> 6. Click on your tunnel name in the list, then go to the **"Public Hostname"** tab.
+>
+> 7. Click **"Add a public hostname"** and configure:
+>    - **Subdomain:** your chosen subdomain (e.g., `syn`)
+>    - **Domain:** select your domain
+>    - **Service type:** `HTTP`
+>    - **URL:** `localhost:8137`
+>
+> 8. Save.
+>
+> You now have two things: the install command (with token) and your public hostname. Tell me when ready.
 
 Now have the user save the tunnel token and hostname. First ensure permissions, then open the `.env` file:
 
@@ -573,10 +583,14 @@ If a `.pem` is found, tell the user:
 > `<filename>`
 >
 > Is this the one? (Or tell me the full path if it downloaded elsewhere.)
+>
+> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location. The contents stay between you and your filesystem.
 
 If no `.pem` is found, tell the user:
 
 > **Private key:** Click "Generate a private key" on the app settings page. It downloads a `.pem` file (usually to `~/Downloads/`). Tell me the file path when it is downloaded.
+>
+> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location.
 
 **Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move.
 
