@@ -132,15 +132,29 @@ chmod +x "$HOME/.syntropic137/syn-ctl"
 chmod +x "$HOME/.syntropic137/selfhost-entrypoint.sh"
 ```
 
-Verify all files were downloaded (non-empty):
+Verify all files were downloaded correctly. Check both that files are non-empty AND that they don't contain GitHub 404 responses (which are non-empty HTML/text that passes a simple size check):
 
 ```bash
 for f in docker-compose.syntropic137.yaml .env syn-ctl selfhost-entrypoint.sh; do
-  test -s "$HOME/.syntropic137/$f" && echo "$f: OK" || echo "$f: FAILED"
+  if [ ! -s "$HOME/.syntropic137/$f" ]; then
+    echo "$f: FAILED (empty or missing)"
+  elif head -1 "$HOME/.syntropic137/$f" | grep -qi "not found\|404\|<!DOCTYPE"; then
+    echo "$f: FAILED (got error page instead of file content)"
+  else
+    echo "$f: OK"
+  fi
 done
 ```
 
-If any file failed to download, show the error and suggest the user check their internet connection or that the release exists. **Stop here** if the compose file failed — the other files are recoverable but the compose file is required.
+If any file failed to download, show the error and suggest the user check their internet connection or that the release exists at `${RELEASE_BASE}`. Common cause: the release tag exists but the assets haven't been uploaded yet.
+
+**Stop here** if the compose file or `.env` failed — both are required. The `.env` template must contain actual configuration (look for `APP_ENVIRONMENT` as a sanity check):
+
+```bash
+grep -q 'APP_ENVIRONMENT' "$HOME/.syntropic137/.env" 2>/dev/null && echo "env-template:valid" || echo "env-template:invalid"
+```
+
+If the `.env` is invalid, the setup cannot proceed — secrets would be written to a garbage file.
 
 Write the version tag to a metadata file for later use:
 
