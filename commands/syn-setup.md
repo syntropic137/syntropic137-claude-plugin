@@ -282,7 +282,8 @@ Requires: GitHub account (free).
 **[1] Cloudflare Tunnel** -- *recommended*
 Provides a stable public endpoint for your instance. Enables two things: (1) **GitHub webhook delivery** — required for auto-triggering workflows on push/PR/issue events, and (2) **remote access** — reach your dashboard and API from anywhere, not just localhost. Without this, agents still work (push code, create PRs, review) but must be triggered manually, and the dashboard is localhost-only.
 **Set up before GitHub App** — the tunnel hostname is used as the webhook URL.
-Requires: Cloudflare account + domain (~$15/yr if buying new). Setup: ~5 min.
+Requires: Cloudflare account + a domain already added to Cloudflare. Setup: ~5 min.
+If you don't have a domain on Cloudflare yet, see: https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/
 
 **[2] 1Password** -- *recommended*
 Backs up all secrets to 1Password. Restore on a new machine in minutes.
@@ -326,7 +327,7 @@ Before collecting any credentials, reassure the user:
 >
 > Instead, I will open your `.env` config file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
-> **How the `!` prefix works:** When I show you a command starting with `!`, paste the full line (including the `!`) into the Claude Code prompt and press Enter. The `!` tells Claude Code to run it in your terminal — I cannot see the output.
+> **How the `!` prefix works:** When I show you a command starting with `!`, type `!` into the Claude Code prompt first — this switches the input to terminal mode. Then paste the rest of the command (without the `!`) and press Enter. Claude Code runs it in your terminal — I cannot see the output.
 
 ---
 
@@ -412,30 +413,32 @@ Tell the user:
 
 > Setting up a Cloudflare tunnel to give your instance a public URL. We do this before the GitHub App so you have the webhook URL ready.
 >
-> 1. Open the Cloudflare Zero Trust dashboard:
->    https://dash.cloudflare.com/?to=/:account/networks-tunnels
+> 1. Open the Cloudflare tunnel creation page:
+>    https://dash.cloudflare.com/?to=/:account/networks-tunnels/create
 >
-> 2. Click **"Create a tunnel"** and choose **"Cloudflared"**
+> 2. Name your tunnel (e.g., `syntropic137`) and click **"Create tunnel"**.
 >
-> 3. Name it something like `syntropic137`
->
-> 4. On the **"Install and run connectors"** step, Cloudflare shows an install command like:
+> 3. Cloudflare shows install commands for different platforms (Windows, macOS, Linux, Docker). **Pick any one** — we only need the token from it, and the token is the same across all of them. For example the Docker tab shows:
 >    ```
->    cloudflared service install eyJhIjoi...
+>    docker run cloudflare/cloudflared:latest tunnel --no-autoupdate run --token eyJhIjoi...
 >    ```
 >    Copy the **full command** — you do NOT need to extract the token yourself.
 >
-> 5. **Don't wait for the connector to connect.** The wizard won't let you proceed to routes from here. Instead, go back to **Networks > Tunnels** in the sidebar.
+> 4. Go back to the tunnels list:
+>    https://dash.cloudflare.com/?to=/:account/networks-tunnels
 >
-> 6. Click on your tunnel name in the list, then go to the **"Public Hostname"** tab.
+> 5. Click on your new tunnel name in the table.
 >
-> 7. Click **"Add a public hostname"** and configure:
->    - **Subdomain:** your chosen subdomain (e.g., `syn`)
->    - **Domain:** select your domain
->    - **Service type:** `HTTP`
->    - **URL:** `localhost:8137`
+> 6. Go to the **"Routes"** tab, then click **"Add route"** → **"Publish application"**.
 >
-> 8. Save.
+> 7. Configure the route:
+>    - **Subdomain:** your chosen subdomain (e.g., `syntropic-beta-test`) — this becomes how you access the app and webhooks
+>    - **Domain:** select your domain (must already be added to your Cloudflare account)
+>    - **Service URL:** `http://localhost:8137`
+>
+> 8. Click **"Add route"**. You should see "Route added successfully."
+>
+> 9. Copy the **hostname** shown in the route (e.g., `syntropic-beta-test.yourdomain.com`) — you'll need it next.
 >
 > You now have two things: the install command (with token) and your public hostname. Tell me when ready.
 
@@ -535,6 +538,7 @@ Tell the user:
 > I will open the GitHub App creation page in your browser. You will need to fill in a few fields:
 >
 > - **GitHub App name:** choose any unique name (e.g., `syntropic137-yourname`)
+> - **Logo:** optionally upload a logo for your app (you can always add one later in settings)
 > - **Homepage URL:** `http://localhost:8137` (or your public URL if you have one)
 > - **Webhook URL:** `https://<your-public-hostname>/api/v1/github/webhook`
 >   *(shown above if Cloudflare was configured)*
@@ -621,7 +625,7 @@ find "$HOME/Downloads" -maxdepth 1 -name '*.pem' -type f -print0 2>/dev/null | x
 
 If a `.pem` is found, tell the user:
 
-> **Private key:** Click "Generate a private key" on the app settings page. GitHub downloads a `.pem` file to your Downloads folder.
+> **Private key:** Scroll to the **bottom** of the app settings page and click "Generate a private key". GitHub downloads a `.pem` file to your Downloads folder.
 >
 > I found this `.pem` in your Downloads:
 > `<filename>`
@@ -632,7 +636,7 @@ If a `.pem` is found, tell the user:
 
 If no `.pem` is found, tell the user:
 
-> **Private key:** Click "Generate a private key" on the app settings page. It downloads a `.pem` file (usually to `~/Downloads/`). Tell me the file path when it is downloaded.
+> **Private key:** Scroll to the **bottom** of the app settings page and click "Generate a private key". It downloads a `.pem` file (usually to `~/Downloads/`). Tell me the file path when it is downloaded.
 >
 > **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location.
 
