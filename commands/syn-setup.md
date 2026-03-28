@@ -312,19 +312,9 @@ Before collecting any credentials, reassure the user:
 
 > **A note on security:** The next few phases involve API keys, tokens, and a private key. I will never ask you to paste a secret into this chat — that would store it in conversation history.
 >
-> Instead, you will copy your secret to your clipboard, then run a short command that reads it from the clipboard and saves it to `.env`. The command runs in your terminal, outside of my context — I cannot see the value.
+> Instead, I will open your `.env` file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
-> **How it works:**
->
-> 1. Copy your secret to your clipboard (Cmd+C / Ctrl+C)
-> 2. In the Claude Code prompt, **type `!` followed by a space** — do NOT paste it, type it manually
-> 3. Then paste the rest of the command after the `!` (e.g., `~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY`)
-> 4. Press Enter — the script reads from your clipboard and saves it to `.env`
-> 5. You should see `✓ <KEY_NAME> saved to .env`
->
-> **Important:** The `!` must be typed, not pasted as part of the command. It tells Claude Code to run the rest in your shell. If you paste the whole line including `!`, it may not enter shell mode.
->
-> The value never appears on screen or in this conversation.
+> **How the `!` prefix works:** When I ask you to run a shell command, you will type `!` then a space in the Claude Code prompt, then paste the rest of the command. The `!` tells Claude Code to run it in your terminal — I cannot see the output. **Important:** type the `!` yourself, then paste the command after it. If you paste the whole line including `!` it may not enter shell mode.
 
 ---
 
@@ -332,28 +322,23 @@ Before collecting any credentials, reassure the user:
 
 Agents need an LLM API key to run. Tell the user:
 
-> Agents need an LLM provider to run. Here is how to set your key:
+> Agents need an LLM provider to run. I will open your config file — you just need to paste your key into it.
 >
-> **Step 1:** Copy your API key to your clipboard:
-> - **Anthropic API key:** https://console.anthropic.com/settings/keys — click the copy button
+> **Step 1:** Get your key ready:
+> - **Anthropic API key:** https://console.anthropic.com/settings/keys — copy it to your clipboard
 > - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
-> **Step 2:** In this prompt, type `!` then a space, then paste the command below and press Enter:
->
-> For Anthropic API key:
+> **Step 2:** Type `!` then a space, then paste this and press Enter:
 > ```
-> ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY
+> ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 >
-> For OAuth token:
-> ```
-> ~/.syntropic137/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN
-> ```
+> **Step 3:** In the editor, find the line that says:
+> - `ANTHROPIC_API_KEY=` — paste your Anthropic key right after the `=`
+> - **Or** scroll to `CLAUDE_CODE_OAUTH_TOKEN=` and paste your OAuth token there instead
+> - (Only one is needed — the file has comments explaining both)
 >
-> So what you type looks like: `! ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY`
-> (the `!` is typed by you, then paste the rest)
->
-> The script reads from your clipboard and saves it. You should see `✓ ANTHROPIC_API_KEY saved to .env`.
+> **Step 4:** Save and close the editor (in nano: `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit).
 >
 > Let me know when done.
 
@@ -412,36 +397,28 @@ Tell the user:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **entire command** to your clipboard (or just the token after `install`).
+>    Copy the **token** (the long `eyJ...` string after `install`).
 
-Ask the user for the tunnel token using the helper script:
+Now have the user save the tunnel token and hostname. Open the `.env` file:
 
-> Now save the tunnel token. Copy the install command or token to your clipboard, then:
+> Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
 >
 > Type `!` then a space, then paste:
 > ```
-> ~/.syntropic137/set-secret.sh CLOUDFLARE_TUNNEL_TOKEN
+> ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 >
-> The script reads the token from your clipboard (it auto-extracts the `eyJ...` token if you copied the full command). You should see `✓ CLOUDFLARE_TUNNEL_TOKEN saved to .env`.
+> Find the **CLOUDFLARE TUNNEL** section and fill in:
+> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the token (starts with `eyJ...`)
+> - `SYN_PUBLIC_HOSTNAME=` — type the hostname you configured (e.g., `syn.yourdomain.com`)
+>
+> Save and close the editor.
 
-Then ask (this is not a secret, safe to type here):
-
-> What is the public hostname you configured? (e.g., `syn.yourdomain.com`)
-
-Write the hostname to `.env`:
-
-```bash
-sed -i.bak "s|^SYN_PUBLIC_HOSTNAME=.*|SYN_PUBLIC_HOSTNAME=${PUBLIC_HOSTNAME}|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
-```
-
-If the key does not already exist as a placeholder, append it instead of using sed.
-
-Read back the configured hostname for use in the next phase:
+After the user confirms, verify both values were set and read back the hostname for use in the next phase:
 
 ```bash
-grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" | cut -d= -f2 | tr -d '"' | tr -d "'"
+grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
+grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'"
 ```
 
 ---
