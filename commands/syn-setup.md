@@ -289,22 +289,18 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ---
 
-## Detect Editor Command
+## Editor Selection
 
-Before Phase 5, detect the OS and choose the right editor command. Store it for reuse across phases.
-
-```bash
-if [ "$(uname)" = "Darwin" ]; then
-  echo "editor:open -t"
-else
-  echo "editor:${EDITOR:-nano}"
-fi
-```
+Before Phase 5, detect the OS to decide which editor command to show the user:
 
 - **macOS (`Darwin`):** Use `open -t` — opens in the user's default GUI text editor (VS Code, TextEdit, Sublime, etc.)
-- **Linux:** Use `$EDITOR` if set, otherwise `nano`
+- **Linux:** Use `$EDITOR` if set, otherwise `nano`. Include terminal editor hints (nano: `Ctrl+O`, `Ctrl+X`).
 
-Store the result and use it in the instructions below. On macOS, the save instructions are just "save and close the file" (standard GUI behavior). On Linux, include terminal editor hints (e.g., nano: `Ctrl+O`, `Ctrl+X`).
+```bash
+uname
+```
+
+Use the result to show the correct command in Phase 5 and 7 instructions below.
 
 ---
 
@@ -316,7 +312,7 @@ Before collecting any credentials, reassure the user:
 >
 > Instead, I will open your `.env` config file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
-> **How the `!` prefix works:** When I ask you to run a shell command, you will type `!` then a space in the Claude Code prompt, then paste the rest of the command. The `!` tells Claude Code to run it in your terminal — I cannot see the output. **Important:** type the `!` yourself, then paste the command after it. If you paste the whole line including `!` it may not enter shell mode.
+> **How the `!` prefix works:** When I show you a command starting with `!`, paste the full line (including the `!`) into the Claude Code prompt and press Enter. The `!` tells Claude Code to run it in your terminal — I cannot see the output.
 
 ---
 
@@ -325,21 +321,29 @@ Before collecting any credentials, reassure the user:
 Agents need an LLM API key to run. Tell the user:
 
 > Agents need an LLM provider to run. I will open your config file — you just need to paste your key into it.
+
+First, ensure the `.env` has restricted permissions before opening it for editing:
+
+```bash
+chmod 600 "$HOME/.syntropic137/.env"
+```
+
+Then tell the user:
 >
 > **Step 1:** Get your key ready:
 > - **Anthropic API key:** https://console.anthropic.com/settings/keys — copy it to your clipboard
 > - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
-> **Step 2:** Type `!` then a space, then paste this and press Enter:
+> **Step 2:** Paste one of these commands into the Claude Code prompt and press Enter:
 
 **On macOS:**
 > ```
-> open -t ~/.syntropic137/.env
+> ! open -t ~/.syntropic137/.env
 > ```
 
 **On Linux:**
 > ```
-> ${EDITOR:-nano} ~/.syntropic137/.env
+> ! ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 
 > **Step 3:** In the editor, find the line that says:
@@ -357,8 +361,8 @@ After the user confirms, enforce permissions and verify the key was written (wit
 
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
-grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
-  grep -q 'CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
+grep -q '^ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
+  grep -q '^CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
   echo "key:missing"
 ```
 
@@ -415,16 +419,16 @@ Now have the user save the tunnel token and hostname. Open the `.env` file:
 
 > Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
 >
-> Type `!` then a space, then paste:
+> Paste one of these commands into the Claude Code prompt and press Enter:
 
 **On macOS:**
 > ```
-> open -t ~/.syntropic137/.env
+> ! open -t ~/.syntropic137/.env
 > ```
 
 **On Linux:**
 > ```
-> ${EDITOR:-nano} ~/.syntropic137/.env
+> ! ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 
 > Find the **CLOUDFLARE TUNNEL** section and fill in:
@@ -437,7 +441,7 @@ After the user confirms, enforce permissions, verify both values, and read back 
 
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
-grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
+grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
 _syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
 echo "hostname:${_syn_hostname}"
 ```
