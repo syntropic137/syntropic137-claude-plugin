@@ -285,20 +285,34 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ---
 
+## Detect Editor Command
+
+Before Phase 5, detect the OS and choose the right editor command. Store it for reuse across phases.
+
+```bash
+if [ "$(uname)" = "Darwin" ]; then
+  echo "editor:open -t"
+else
+  echo "editor:${EDITOR:-nano}"
+fi
+```
+
+- **macOS (`Darwin`):** Use `open -t` — opens in the user's default GUI text editor (VS Code, TextEdit, Sublime, etc.)
+- **Linux:** Use `$EDITOR` if set, otherwise `nano`
+
+Store the result and use it in the instructions below. On macOS, the save instructions are just "save and close the file" (standard GUI behavior). On Linux, include terminal editor hints (e.g., nano: `Ctrl+O`, `Ctrl+X`).
+
+---
+
 ## Security Note (display before Phase 5)
 
 Before collecting any credentials, reassure the user:
 
 > **A note on security:** The next few phases involve API keys, tokens, and a private key. I will never ask you to paste a secret into this chat — that would store it in conversation history.
 >
-> Instead, you will use commands that start with `!` — this runs them directly in your terminal, outside of my context. I cannot see what you type or paste. Here is how it works:
+> Instead, I will open your `.env` config file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
-> 1. I give you a short command starting with `!`
-> 2. You paste or type that command into this prompt and press Enter
-> 3. Your terminal prompts you for the secret value — **the text you type will be hidden** (no characters appear, that is normal)
-> 4. Press Enter to confirm — the script saves it to your `.env` file and prints `✓ <KEY_NAME> saved to .env`
->
-> That is it. The value never appears on screen or in this conversation.
+> **How the `!` prefix works:** When I ask you to run a shell command, you will type `!` then a space in the Claude Code prompt, then paste the rest of the command. The `!` tells Claude Code to run it in your terminal — I cannot see the output. **Important:** type the `!` yourself, then paste the command after it. If you paste the whole line including `!` it may not enter shell mode.
 
 ---
 
@@ -306,24 +320,33 @@ Before collecting any credentials, reassure the user:
 
 Agents need an LLM API key to run. Tell the user:
 
-> Agents need an LLM provider to run. First, get your key ready:
-> - **Anthropic API key:** https://console.anthropic.com/settings/keys (copy it to your clipboard)
-> - **Or** if you use Claude Code with an OAuth token, have that ready instead.
+> Agents need an LLM provider to run. I will open your config file — you just need to paste your key into it.
 >
-> Then paste this command into the prompt and press Enter:
+> **Step 1:** Get your key ready:
+> - **Anthropic API key:** https://console.anthropic.com/settings/keys — copy it to your clipboard
+> - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
-> **For Anthropic API key:**
+> **Step 2:** Type `!` then a space, then paste this and press Enter:
+
+**On macOS:**
 > ```
-> ! ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY
+> open -t ~/.syntropic137/.env
 > ```
->
-> **Or for OAuth token:**
+
+**On Linux:**
 > ```
-> ! ~/.syntropic137/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN
+> ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
+
+> **Step 3:** In the editor, find the line that says:
+> - `ANTHROPIC_API_KEY=` — paste your Anthropic key right after the `=`
+> - **Or** scroll to `CLAUDE_CODE_OAUTH_TOKEN=` and paste your OAuth token there instead
+> - (Only one is needed — the file has comments explaining both)
 >
-> It will prompt `ANTHROPIC_API_KEY:` — paste your key and press Enter. The text stays hidden (you will not see any characters — that is expected). You should see `✓ ANTHROPIC_API_KEY saved to .env`.
->
+> **Step 4:** Save and close the file.
+
+On Linux with nano, add: *(nano: `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit)*
+
 > Let me know when done.
 
 After the user confirms, verify the key was written (without revealing it):
@@ -381,34 +404,35 @@ Tell the user:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **entire command** (or just the token after `install`).
+>    Copy the **token** (the long `eyJ...` string after `install`).
 
-Ask the user for the tunnel token using the helper script:
+Now have the user save the tunnel token and hostname. Open the `.env` file:
 
-> Now save the tunnel token. Paste this command into the prompt and press Enter:
-> ```
-> ! ~/.syntropic137/set-secret.sh CLOUDFLARE_TUNNEL_TOKEN
-> ```
+> Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
 >
-> It will prompt `CLOUDFLARE_TUNNEL_TOKEN:` — paste the token (or the full `cloudflared service install ...` command, either works) and press Enter. The text stays hidden. You should see `✓ CLOUDFLARE_TUNNEL_TOKEN saved to .env`.
+> Type `!` then a space, then paste:
 
-Then ask (this is not a secret, safe to type here):
+**On macOS:**
+> ```
+> open -t ~/.syntropic137/.env
+> ```
 
-> What is the public hostname you configured? (e.g., `syn.yourdomain.com`)
+**On Linux:**
+> ```
+> ${EDITOR:-nano} ~/.syntropic137/.env
+> ```
 
-Write the hostname to `.env`:
+> Find the **CLOUDFLARE TUNNEL** section and fill in:
+> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the token (starts with `eyJ...`)
+> - `SYN_PUBLIC_HOSTNAME=` — type the hostname you configured (e.g., `syn.yourdomain.com`)
+>
+> Save and close the file.
+
+After the user confirms, verify both values were set and read back the hostname for use in the next phase:
 
 ```bash
-sed -i.bak "s|^SYN_PUBLIC_HOSTNAME=.*|SYN_PUBLIC_HOSTNAME=${PUBLIC_HOSTNAME}|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
-```
-
-If the key does not already exist as a placeholder, append it instead of using sed.
-
-Read back the configured hostname for use in the next phase:
-
-```bash
-grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" | cut -d= -f2 | tr -d '"' | tr -d "'"
+grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
+grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'"
 ```
 
 ---
