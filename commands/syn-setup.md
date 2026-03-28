@@ -306,13 +306,32 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ---
 
+## Detect Editor Command
+
+Before Phase 5, detect the OS and choose the right editor command. Store it for reuse across phases.
+
+```bash
+if [ "$(uname)" = "Darwin" ]; then
+  echo "editor:open -t"
+else
+  echo "editor:${EDITOR:-nano}"
+fi
+```
+
+- **macOS (`Darwin`):** Use `open -t` — opens in the user's default GUI text editor (VS Code, TextEdit, Sublime, etc.)
+- **Linux:** Use `$EDITOR` if set, otherwise `nano`
+
+Store the result and use it in the instructions below. On macOS, the save instructions are just "save and close the file" (standard GUI behavior). On Linux, include terminal editor hints (e.g., nano: `Ctrl+O`, `Ctrl+X`).
+
+---
+
 ## Security Note (display before Phase 5)
 
 Before collecting any credentials, reassure the user:
 
 > **A note on security:** The next few phases involve API keys, tokens, and a private key. I will never ask you to paste a secret into this chat — that would store it in conversation history.
 >
-> Instead, I will open your `.env` file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
+> Instead, I will open your `.env` config file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
 > **How the `!` prefix works:** When I ask you to run a shell command, you will type `!` then a space in the Claude Code prompt, then paste the rest of the command. The `!` tells Claude Code to run it in your terminal — I cannot see the output. **Important:** type the `!` yourself, then paste the command after it. If you paste the whole line including `!` it may not enter shell mode.
 
@@ -329,17 +348,26 @@ Agents need an LLM API key to run. Tell the user:
 > - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
 > **Step 2:** Type `!` then a space, then paste this and press Enter:
+
+**On macOS:**
+> ```
+> open -t ~/.syntropic137/.env
+> ```
+
+**On Linux:**
 > ```
 > ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
->
+
 > **Step 3:** In the editor, find the line that says:
 > - `ANTHROPIC_API_KEY=` — paste your Anthropic key right after the `=`
 > - **Or** scroll to `CLAUDE_CODE_OAUTH_TOKEN=` and paste your OAuth token there instead
 > - (Only one is needed — the file has comments explaining both)
 >
-> **Step 4:** Save and close the editor (in nano: `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit).
->
+> **Step 4:** Save and close the file.
+
+On Linux with nano, add: *(nano: `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit)*
+
 > Let me know when done.
 
 After the user confirms, verify the key was written (without revealing it):
@@ -404,15 +432,22 @@ Now have the user save the tunnel token and hostname. Open the `.env` file:
 > Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
 >
 > Type `!` then a space, then paste:
+
+**On macOS:**
+> ```
+> open -t ~/.syntropic137/.env
+> ```
+
+**On Linux:**
 > ```
 > ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
->
+
 > Find the **CLOUDFLARE TUNNEL** section and fill in:
 > - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the token (starts with `eyJ...`)
 > - `SYN_PUBLIC_HOSTNAME=` — type the hostname you configured (e.g., `syn.yourdomain.com`)
 >
-> Save and close the editor.
+> Save and close the file.
 
 After the user confirms, verify both values were set and read back the hostname for use in the next phase:
 
