@@ -195,6 +195,14 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ---
 
+## Security Note (display before Phase 5)
+
+Before collecting any credentials, reassure the user:
+
+> **A note on security:** The next few phases involve API keys, tokens, and a private key. None of these will ever enter this conversation. Every secret is handled through your shell — I provide the commands, but the values stay between you and your filesystem. You can verify this yourself: every sensitive command uses the `!` prefix, which runs in your terminal outside of my context. See `SECURITY.md` in the plugin repo for the full security model.
+
+---
+
 ## Phase 5 — API Key
 
 Agents need an LLM API key to run. Tell the user:
@@ -268,14 +276,20 @@ Tell the user:
 >    - **Public hostname:** choose your subdomain (e.g., `syn.yourdomain.com`)
 >    - **Service:** `http://localhost:8137`
 >
-> 5. On the "Install and run connectors" step, copy the tunnel token (the long string after `--token`)
+> 5. On the "Install and run connectors" step, Cloudflare shows an install command like:
+>    ```
+>    cloudflared service install eyJhIjoi...
+>    ```
+>    Copy the **entire command** (or just the token after `install`).
 
-Ask the user for the tunnel token using a terminal command (same reason as API key — avoid pasting secrets into chat):
+Ask the user for the tunnel token using a terminal command. The command accepts either the full `cloudflared service install <token>` command or a bare token — it extracts the `eyJ...` token automatically:
 
 > Run this in your terminal to save the tunnel token without exposing it in the chat:
 > ```
-> ! read -rsp "Cloudflare tunnel token: " _syn_tok && printf '\n' && sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."
+> ! read -rsp "Paste the Cloudflare install command or token: " _syn_raw && printf '\n' && _syn_tok=$(echo "$_syn_raw" | grep -oE 'eyJ[A-Za-z0-9_-]+' | tail -1) && if [ -n "$_syn_tok" ]; then sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."; else echo "ERROR: Could not extract token. Make sure it starts with eyJ. Try pasting just the token."; fi && unset _syn_raw _syn_tok
 > ```
+>
+> **Note:** Cloudflare tokens always start with `eyJ` (base64 JSON). The command extracts it automatically whether you paste the full install command or just the token.
 
 Then ask (this is not a secret, safe to type here):
 
@@ -322,25 +336,33 @@ Tell the user:
 >   *(shown above if Cloudflare was configured)*
 > - **Webhook secret:** I will generate one for you — see below
 
-Generate the webhook secret first, before opening the browser, so the user has it ready:
+Generate the webhook secret, copy it to the user's clipboard, and save it to `.env` — all without displaying the value:
 
 ```bash
-openssl rand -hex 20
+! _wh_secret=$(openssl rand -hex 20) && \
+  if command -v pbcopy >/dev/null 2>&1; then \
+    printf '%s' "$_wh_secret" | pbcopy && _clip="clipboard"; \
+  elif command -v xclip >/dev/null 2>&1; then \
+    printf '%s' "$_wh_secret" | xclip -selection clipboard && _clip="clipboard"; \
+  else \
+    _clip=""; \
+  fi && \
+  sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=$_wh_secret|" "$HOME/.syntropic137/.env" && \
+  rm -f "$HOME/.syntropic137/.env.bak" && \
+  if [ -n "$_clip" ]; then \
+    echo "Webhook secret generated, copied to clipboard, and saved to .env."; \
+  else \
+    echo "Webhook secret generated and saved to .env."; \
+    echo "Clipboard not available — retrieve it with: grep SYN_GITHUB_WEBHOOK_SECRET ~/.syntropic137/.env | cut -d= -f2"; \
+  fi && \
+  unset _wh_secret _clip
 ```
 
-Show the generated secret to the user and tell them:
+Tell the user:
 
-> Copy this webhook secret — you will paste it into the GitHub App creation form under "Webhook secret":
-> `<generated-secret>`
+> **If clipboard was available:** Your webhook secret is in your clipboard (Cmd+V / Ctrl+V). Paste it into the GitHub App creation form under "Webhook secret". It is already saved to `.env` — you do not need to keep it anywhere else.
 >
-> Keep it — I will also save it to `.env` automatically.
-
-Save the webhook secret immediately:
-
-```bash
-sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=${WEBHOOK_SECRET}|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
-```
+> **If clipboard was not available:** The secret is saved to `.env`. Run the `grep` command shown above to retrieve it for pasting into GitHub.
 
 Open the GitHub App creation page:
 
@@ -349,31 +371,66 @@ open "https://github.com/settings/apps/new" 2>/dev/null || \
   echo "Please open this URL in your browser: https://github.com/settings/apps/new"
 ```
 
-After the user creates the app, ask for the details:
+After the user creates the app, ask for the App ID and name first:
 
-> After creating the app, GitHub shows you the app settings page. I need two values from there:
+> After creating the app, GitHub shows you the app settings page. I need:
 >
 > 1. **App ID** (shown at the top of the General settings page)
 > 2. **App name** (the name you entered)
-> 3. **Private key** — click "Generate a private key" on the settings page. It downloads a `.pem` file. Tell me the path to that file (e.g., `~/Downloads/my-app.2026-03-26.private-key.pem`).
-
-For the private key, copy it to the secrets directory:
-
-```bash
-cp "<user-provided-path>" "$HOME/.syntropic137/secrets/github-app-private-key.pem"
-chmod 600 "$HOME/.syntropic137/secrets/github-app-private-key.pem"
-```
 
 Write App ID and name to `.env`:
 
 ```bash
 sed -i.bak "s|^SYN_GITHUB_APP_ID=.*|SYN_GITHUB_APP_ID=${APP_ID}|" "$HOME/.syntropic137/.env"
 sed -i.bak "s|^SYN_GITHUB_APP_NAME=.*|SYN_GITHUB_APP_NAME=${APP_NAME}|" "$HOME/.syntropic137/.env"
-sed -i.bak "s|^SYN_GITHUB_APP_PRIVATE_KEY_PATH=.*|SYN_GITHUB_APP_PRIVATE_KEY_PATH=/run/secrets/github-app-private-key.pem|" "$HOME/.syntropic137/.env"
 rm -f "$HOME/.syntropic137/.env.bak"
 ```
 
 If any `.env` key does not already exist as a placeholder, append it instead of using sed.
+
+### Private key handling
+
+Now handle the private key. First, check `~/Downloads` for the most recently downloaded `.pem` file:
+
+```bash
+ls -t "$HOME/Downloads/"*.pem 2>/dev/null | head -1
+```
+
+If a `.pem` is found, tell the user:
+
+> **Private key:** Click "Generate a private key" on the app settings page. GitHub downloads a `.pem` file to your Downloads folder.
+>
+> I found this `.pem` in your Downloads:
+> `<filename>`
+>
+> Is this the one? (Or tell me the full path if it downloaded elsewhere.)
+
+If no `.pem` is found, tell the user:
+
+> **Private key:** Click "Generate a private key" on the app settings page. It downloads a `.pem` file (usually to `~/Downloads/`). Tell me the file path when it is downloaded.
+
+**Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move.
+
+Once the user confirms the path, move the `.pem` to the secrets directory and set permissions. **NEVER use Read, cat, or any tool to view the `.pem` contents — only move the file:**
+
+```bash
+mv "<user-provided-path>" "$HOME/.syntropic137/secrets/github-app-private-key.pem" && \
+  chmod 600 "$HOME/.syntropic137/secrets/github-app-private-key.pem" && \
+  echo "Private key moved to secrets/ (original removed)."
+```
+
+Verify the key file exists (size check only, never read contents):
+
+```bash
+test -s "$HOME/.syntropic137/secrets/github-app-private-key.pem" && echo "pem:ok" || echo "pem:missing"
+```
+
+Write the key path to `.env` (this is the container-internal path, not the host path). The adapter reads the raw `.pem` directly — no base64 encoding needed:
+
+```bash
+sed -i.bak "s|^SYN_GITHUB_APP_PRIVATE_KEY_PATH=.*|SYN_GITHUB_APP_PRIVATE_KEY_PATH=/run/secrets/github-app-private-key.pem|" "$HOME/.syntropic137/.env"
+rm -f "$HOME/.syntropic137/.env.bak"
+```
 
 ---
 
