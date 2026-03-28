@@ -58,6 +58,10 @@ claude plugin install syntropic137@syntropic137
 
 `hooks/hooks.json` is **loaded automatically** by Claude Code — do NOT reference it in `plugin.json`. Only add a `"hooks"` field to `plugin.json` if you have a *second* hooks file at a non-standard path.
 
+## Security
+
+See [./SECURITY.md](./SECURITY.md) for the full security model. The critical rule: **secrets must never enter Claude's context window.** All credential input uses `!` prefix (external shell execution), file paths instead of file content, and `grep -q` status checks instead of value reads. Contributors must follow these patterns — see the rules in SECURITY.md before touching any setup or secrets code.
+
 ## Scratch files
 
-Root-level `.md` files (except `README.md`, `CLAUDE.md`) are scratch — never commit them.
+Root-level `.md` files (except `README.md`, `CLAUDE.md`, `SECURITY.md`) are scratch — never commit them.
