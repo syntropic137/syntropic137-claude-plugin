@@ -144,6 +144,59 @@ Write the version tag to a metadata file for later use:
 echo "$LATEST_TAG" > "$HOME/.syntropic137/.version"
 ```
 
+Create a helper script for setting secrets securely (so users never have to copy-paste shell one-liners):
+
+```bash
+cat > "$HOME/.syntropic137/set-secret.sh" << 'SCRIPT_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE="$HOME/.syntropic137/.env"
+
+usage() {
+  echo "Usage: set-secret.sh <KEY_NAME>"
+  echo ""
+  echo "Prompts for a value and writes it to .env securely."
+  echo ""
+  echo "Examples:"
+  echo "  set-secret.sh ANTHROPIC_API_KEY"
+  echo "  set-secret.sh CLAUDE_CODE_OAUTH_TOKEN"
+  echo "  set-secret.sh CLOUDFLARE_TUNNEL_TOKEN"
+  exit 1
+}
+
+[ -z "${1:-}" ] && usage
+
+KEY_NAME="$1"
+read -rsp "${KEY_NAME}: " _val && printf '\n'
+
+if [ -z "$_val" ]; then
+  echo "Error: empty value." >&2
+  exit 1
+fi
+
+# Cloudflare: extract eyJ... token if user pasted full install command
+if [ "$KEY_NAME" = "CLOUDFLARE_TUNNEL_TOKEN" ]; then
+  _extracted=$(echo "$_val" | grep -oE 'eyJ[A-Za-z0-9_.=-]+' | tail -1)
+  if [ -n "$_extracted" ]; then
+    _val="$_extracted"
+  fi
+  unset _extracted
+fi
+
+if grep -q "^${KEY_NAME}=" "$ENV_FILE" 2>/dev/null; then
+  sed -i.bak "s|^${KEY_NAME}=.*|${KEY_NAME}=${_val}|" "$ENV_FILE"
+  rm -f "$ENV_FILE.bak"
+else
+  echo "${KEY_NAME}=${_val}" >> "$ENV_FILE"
+fi
+
+unset _val
+echo "✓ ${KEY_NAME} saved to .env"
+SCRIPT_EOF
+chmod +x "$HOME/.syntropic137/set-secret.sh"
+```
+
 ---
 
 ## Phase 4 — Feature Selection
@@ -172,9 +225,9 @@ Requires: GitHub account (free).
 **OPTIONAL FEATURES:**
 
 **[1] Cloudflare Tunnel** -- *recommended*
-Gives your instance a public URL for GitHub webhooks. Required for auto-triggering workflows on push/PR. Without this, manual runs only and dashboard on localhost only.
+Provides a stable public endpoint for your instance. Enables two things: (1) **GitHub webhook delivery** — required for auto-triggering workflows on push/PR/issue events, and (2) **remote access** — reach your dashboard and API from anywhere, not just localhost. Without this, agents still work (push code, create PRs, review) but must be triggered manually, and the dashboard is localhost-only.
 **Set up before GitHub App** — the tunnel hostname is used as the webhook URL.
-Requires: Cloudflare account + domain ($10-15/yr if buying new). Setup: ~5 min.
+Requires: Cloudflare account + domain (~$15/yr if buying new). Setup: ~5 min.
 
 **[2] 1Password** -- *recommended*
 Backs up all secrets to 1Password. Restore on a new machine in minutes.
@@ -199,7 +252,16 @@ Store the selections for use in later phases. Optional features can be added lat
 
 Before collecting any credentials, reassure the user:
 
-> **A note on security:** The next few phases involve API keys, tokens, and a private key. None of these will ever enter this conversation. Every secret is handled through your shell — I provide the commands, but the values stay between you and your filesystem. You can verify this yourself: every command where you type or paste a credential uses the `!` prefix, which runs in your terminal outside of my context. See `SECURITY.md` in the plugin repo for the full security model.
+> **A note on security:** The next few phases involve API keys, tokens, and a private key. I will never ask you to paste a secret into this chat — that would store it in conversation history.
+>
+> Instead, you will use commands that start with `!` — this runs them directly in your terminal, outside of my context. I cannot see what you type or paste. Here is how it works:
+>
+> 1. I give you a short command starting with `!`
+> 2. You paste or type that command into this prompt and press Enter
+> 3. Your terminal prompts you for the secret value — **the text you type will be hidden** (no characters appear, that is normal)
+> 4. Press Enter to confirm — the script saves it to your `.env` file and prints `✓ saved`
+>
+> That is it. The value never appears on screen or in this conversation.
 
 ---
 
@@ -207,23 +269,25 @@ Before collecting any credentials, reassure the user:
 
 Agents need an LLM API key to run. Tell the user:
 
-> Agents need an LLM provider to run. I will NOT ask you to paste the key into this chat — that would expose it in conversation history.
+> Agents need an LLM provider to run. First, get your key ready:
+> - **Anthropic API key:** https://console.anthropic.com/settings/keys (copy it to your clipboard)
+> - **Or** if you use Claude Code with an OAuth token, have that ready instead.
 >
-> Instead, run this command in your terminal (the `!` prefix runs it in your shell without showing the value here):
+> Then paste this command into the prompt and press Enter:
 >
 > **For Anthropic API key:**
 > ```
-> ! read -rsp "ANTHROPIC_API_KEY: " _syn_key && printf '\n' && sed -i.bak "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$_syn_key|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Key saved."
+> ! ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY
 > ```
 >
-> **Alternatively, if you use Claude Code with OAuth token:**
+> **Or for OAuth token:**
 > ```
-> ! read -rsp "CLAUDE_CODE_OAUTH_TOKEN: " _syn_key && printf '\n' && sed -i.bak "s|^CLAUDE_CODE_OAUTH_TOKEN=.*|CLAUDE_CODE_OAUTH_TOKEN=$_syn_key|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."
+> ! ~/.syntropic137/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN
 > ```
 >
-> You can get an API key at https://console.anthropic.com/settings/keys
+> It will prompt `ANTHROPIC_API_KEY:` — paste your key and press Enter. The text stays hidden (you will not see any characters — that is expected). You should see `✓ ANTHROPIC_API_KEY saved to .env`.
 >
-> Tell me when it is done and I will verify.
+> Let me know when done.
 
 After the user confirms, verify the key was written (without revealing it):
 
@@ -282,14 +346,14 @@ Tell the user:
 >    ```
 >    Copy the **entire command** (or just the token after `install`).
 
-Ask the user for the tunnel token using a terminal command. The command accepts either the full `cloudflared service install <token>` command or a bare token — it extracts the `eyJ...` token automatically:
+Ask the user for the tunnel token using the helper script:
 
-> Run this in your terminal to save the tunnel token without exposing it in the chat:
+> Now save the tunnel token. Paste this command into the prompt and press Enter:
 > ```
-> ! read -rsp "Paste the Cloudflare install command or token: " _syn_raw && printf '\n' && _syn_tok=$(echo "$_syn_raw" | grep -oE 'eyJ[A-Za-z0-9_.=-]+' | tail -1) && if [ -n "$_syn_tok" ]; then sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."; else echo "ERROR: Could not extract token. Make sure it starts with eyJ. Try pasting just the token."; fi && unset _syn_raw _syn_tok
+> ! ~/.syntropic137/set-secret.sh CLOUDFLARE_TUNNEL_TOKEN
 > ```
 >
-> **Note:** Cloudflare tokens always start with `eyJ` (base64 JSON). The command extracts it automatically whether you paste the full install command or just the token.
+> It will prompt `CLOUDFLARE_TUNNEL_TOKEN:` — paste the token (or the full `cloudflared service install ...` command, either works) and press Enter. The text stays hidden. You should see `✓ CLOUDFLARE_TUNNEL_TOKEN saved to .env`.
 
 Then ask (this is not a secret, safe to type here):
 
