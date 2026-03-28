@@ -138,7 +138,7 @@ Verify all files were downloaded correctly. Check both that files are non-empty 
 for f in docker-compose.syntropic137.yaml .env syn-ctl selfhost-entrypoint.sh; do
   if [ ! -s "$HOME/.syntropic137/$f" ]; then
     echo "$f: FAILED (empty or missing)"
-  elif head -1 "$HOME/.syntropic137/$f" | grep -qi "not found\|404\|<!DOCTYPE"; then
+  elif head -1 "$HOME/.syntropic137/$f" | grep -Eqi 'not found|404|<!DOCTYPE'; then
     echo "$f: FAILED (got error page instead of file content)"
   else
     echo "$f: OK"
@@ -429,7 +429,11 @@ Tell the user:
 >    ```
 >    Copy the **full install command** that Cloudflare shows you — you do NOT need to extract the token yourself. Paste the whole thing.
 
-Now have the user save the tunnel token and hostname. Open the `.env` file:
+Now have the user save the tunnel token and hostname. First ensure permissions, then open the `.env` file:
+
+```bash
+chmod 600 "$HOME/.syntropic137/.env"
+```
 
 > Now save the tunnel token and your public hostname.
 >
