@@ -55,19 +55,19 @@ for f in db-password.secret redis-password.secret minio-password.secret; do
 done
 
 # API key configured?
-grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:yes" || echo "apikey:no"
+grep -q '^ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:yes" || echo "apikey:no"
 
 # GitHub App configured?
-grep -q 'SYN_GITHUB_APP_ID=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "github:yes" || echo "github:no"
+grep -q '^SYN_GITHUB_APP_ID=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "github:yes" || echo "github:no"
 
 # GitHub App PEM present?
 test -s "$HOME/.syntropic137/secrets/github-app-private-key.pem" && echo "pem:yes" || echo "pem:no"
 
 # Cloudflare configured?
-grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "cloudflare:yes" || echo "cloudflare:no"
+grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "cloudflare:yes" || echo "cloudflare:no"
 
 # 1Password backed up?
-grep -q 'SYN_1PASSWORD_BACKUP=true' "$HOME/.syntropic137/.env" 2>/dev/null && echo "1password:yes" || echo "1password:no"
+grep -q '^SYN_1PASSWORD_BACKUP=true' "$HOME/.syntropic137/.env" 2>/dev/null && echo "1password:yes" || echo "1password:no"
 
 # Containers running?
 docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || echo "containers:none"
@@ -132,15 +132,29 @@ chmod +x "$HOME/.syntropic137/syn-ctl"
 chmod +x "$HOME/.syntropic137/selfhost-entrypoint.sh"
 ```
 
-Verify all files were downloaded (non-empty):
+Verify all files were downloaded correctly. Check both that files are non-empty AND that they don't contain GitHub 404 responses (which are non-empty HTML/text that passes a simple size check):
 
 ```bash
 for f in docker-compose.syntropic137.yaml .env syn-ctl selfhost-entrypoint.sh; do
-  test -s "$HOME/.syntropic137/$f" && echo "$f: OK" || echo "$f: FAILED"
+  if [ ! -s "$HOME/.syntropic137/$f" ]; then
+    echo "$f: FAILED (empty or missing)"
+  elif head -1 "$HOME/.syntropic137/$f" | grep -Eqi 'not found|404|<!DOCTYPE'; then
+    echo "$f: FAILED (got error page instead of file content)"
+  else
+    echo "$f: OK"
+  fi
 done
 ```
 
-If any file failed to download, show the error and suggest the user check their internet connection or that the release exists. **Stop here** if the compose file failed — the other files are recoverable but the compose file is required.
+If any file failed to download, show the error and suggest the user check their internet connection or that the release exists at `${RELEASE_BASE}`. Common cause: the release tag exists but the assets haven't been uploaded yet.
+
+**Stop here** if the compose file or `.env` failed — both are required. The `.env` template must contain actual configuration (look for `APP_ENVIRONMENT` as a sanity check):
+
+```bash
+grep -q '^APP_ENVIRONMENT=' "$HOME/.syntropic137/.env" 2>/dev/null && echo "env-template:valid" || echo "env-template:invalid"
+```
+
+If the `.env` is invalid, the setup cannot proceed — secrets would be written to a garbage file.
 
 Write the version tag to a metadata file for later use:
 
@@ -289,22 +303,18 @@ Store the selections for use in later phases. Optional features can be added lat
 
 ---
 
-## Detect Editor Command
+## Editor Selection
 
-Before Phase 5, detect the OS and choose the right editor command. Store it for reuse across phases.
-
-```bash
-if [ "$(uname)" = "Darwin" ]; then
-  echo "editor:open -t"
-else
-  echo "editor:${EDITOR:-nano}"
-fi
-```
+Before Phase 5, detect the OS to decide which editor command to show the user:
 
 - **macOS (`Darwin`):** Use `open -t` — opens in the user's default GUI text editor (VS Code, TextEdit, Sublime, etc.)
-- **Linux:** Use `$EDITOR` if set, otherwise `nano`
+- **Linux:** Use `$EDITOR` if set, otherwise `nano`. Include terminal editor hints (nano: `Ctrl+O`, `Ctrl+X`).
 
-Store the result and use it in the instructions below. On macOS, the save instructions are just "save and close the file" (standard GUI behavior). On Linux, include terminal editor hints (e.g., nano: `Ctrl+O`, `Ctrl+X`).
+```bash
+uname
+```
+
+Use the result to show the correct command in Phase 5 and 7 instructions below.
 
 ---
 
@@ -316,7 +326,7 @@ Before collecting any credentials, reassure the user:
 >
 > Instead, I will open your `.env` config file in a text editor. You paste your secrets directly into the file, save, and close. The values stay between you and your filesystem — I only check whether a key was set (not what the value is).
 >
-> **How the `!` prefix works:** When I ask you to run a shell command, you will type `!` then a space in the Claude Code prompt, then paste the rest of the command. The `!` tells Claude Code to run it in your terminal — I cannot see the output. **Important:** type the `!` yourself, then paste the command after it. If you paste the whole line including `!` it may not enter shell mode.
+> **How the `!` prefix works:** When I show you a command starting with `!`, paste the full line (including the `!`) into the Claude Code prompt and press Enter. The `!` tells Claude Code to run it in your terminal — I cannot see the output.
 
 ---
 
@@ -325,21 +335,29 @@ Before collecting any credentials, reassure the user:
 Agents need an LLM API key to run. Tell the user:
 
 > Agents need an LLM provider to run. I will open your config file — you just need to paste your key into it.
+
+First, ensure the `.env` has restricted permissions before opening it for editing:
+
+```bash
+chmod 600 "$HOME/.syntropic137/.env"
+```
+
+Then tell the user:
 >
 > **Step 1:** Get your key ready:
 > - **Anthropic API key:** https://console.anthropic.com/settings/keys — copy it to your clipboard
 > - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
-> **Step 2:** Type `!` then a space, then paste this and press Enter:
+> **Step 2:** Paste one of these commands into the Claude Code prompt and press Enter:
 
 **On macOS:**
 > ```
-> open -t ~/.syntropic137/.env
+> ! open -t ~/.syntropic137/.env
 > ```
 
 **On Linux:**
 > ```
-> ${EDITOR:-nano} ~/.syntropic137/.env
+> ! ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 
 > **Step 3:** In the editor, find the line that says:
@@ -357,8 +375,8 @@ After the user confirms, enforce permissions and verify the key was written (wit
 
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
-grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
-  grep -q 'CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
+grep -q '^ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:set" || \
+  grep -q '^CLAUDE_CODE_OAUTH_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "oauth:set" || \
   echo "key:missing"
 ```
 
@@ -395,50 +413,98 @@ Tell the user:
 > Setting up a Cloudflare tunnel to give your instance a public URL. We do this before the GitHub App so you have the webhook URL ready.
 >
 > 1. Open the Cloudflare Zero Trust dashboard:
->    https://dash.cloudflare.com/?to=/:account/tunnels
+>    https://dash.cloudflare.com/?to=/:account/networks-tunnels
 >
-> 2. Click "Create a tunnel" and choose "Cloudflared"
+> 2. Click **"Create a tunnel"** and choose **"Cloudflared"**
 >
 > 3. Name it something like `syntropic137`
 >
-> 4. In the "Route tunnel" step, configure:
->    - **Public hostname:** choose your subdomain (e.g., `syn.yourdomain.com`)
->    - **Service:** `http://localhost:8137`
->
-> 5. On the "Install and run connectors" step, Cloudflare shows an install command like:
+> 4. On the **"Install and run connectors"** step, Cloudflare shows an install command like:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **token** (the long `eyJ...` string after `install`).
-
-Now have the user save the tunnel token and hostname. Open the `.env` file:
-
-> Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
+>    Copy the **full command** — you do NOT need to extract the token yourself.
 >
-> Type `!` then a space, then paste:
+> 5. **Don't wait for the connector to connect.** The wizard won't let you proceed to routes from here. Instead, go back to **Networks > Tunnels** in the sidebar.
+>
+> 6. Click on your tunnel name in the list, then go to the **"Public Hostname"** tab.
+>
+> 7. Click **"Add a public hostname"** and configure:
+>    - **Subdomain:** your chosen subdomain (e.g., `syn`)
+>    - **Domain:** select your domain
+>    - **Service type:** `HTTP`
+>    - **URL:** `localhost:8137`
+>
+> 8. Save.
+>
+> You now have two things: the install command (with token) and your public hostname. Tell me when ready.
+
+Now have the user save the tunnel token and hostname. First ensure permissions, then open the `.env` file:
+
+```bash
+chmod 600 "$HOME/.syntropic137/.env"
+```
+
+> Now save the tunnel token and your public hostname.
+>
+> Paste one of these commands into the Claude Code prompt to open your config:
 
 **On macOS:**
 > ```
-> open -t ~/.syntropic137/.env
+> ! open -t ~/.syntropic137/.env
 > ```
 
 **On Linux:**
 > ```
-> ${EDITOR:-nano} ~/.syntropic137/.env
+> ! ${EDITOR:-nano} ~/.syntropic137/.env
 > ```
 
 > Find the **CLOUDFLARE TUNNEL** section and fill in:
-> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the token (starts with `eyJ...`)
+> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the **full command** Cloudflare gave you (e.g., `cloudflared service install eyJ...`). It is OK to paste the whole thing — I will extract the token automatically after you save.
 > - `SYN_PUBLIC_HOSTNAME=` — type the hostname you configured (e.g., `syn.yourdomain.com`)
 >
 > Save and close the file.
 
-After the user confirms, enforce permissions, verify both values, and read back the hostname for confirmation:
+After the user confirms, enforce permissions, auto-extract the token if they pasted the full command, verify both values, and read back the hostname for confirmation:
 
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
-grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
-_syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+
+# Auto-extract eyJ... token if user pasted full cloudflared command.
+# Uses Python so the token never appears in process args (sed would leak via ps).
+python3 -c "
+import re, os
+
+env_file = os.path.expanduser('~/.syntropic137/.env')
+lines = []
+tunnel_status = 'tunnel:missing'
+
+with open(env_file) as f:
+    for line in f:
+        if line.startswith('CLOUDFLARE_TUNNEL_TOKEN='):
+            raw = line.strip().split('=', 1)[1]
+            m = re.search(r'eyJ[A-Za-z0-9_.=-]+', raw)
+            token = m.group(0) if m else raw
+            lines.append('CLOUDFLARE_TUNNEL_TOKEN=' + token + '\n')
+            if not token:
+                tunnel_status = 'tunnel:missing'
+            elif token != raw:
+                tunnel_status = 'tunnel:extracted (cleaned up full command → token only)'
+            else:
+                tunnel_status = 'tunnel:set'
+        else:
+            lines.append(line)
+
+import tempfile
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(env_file))
+with os.fdopen(fd, 'w') as f:
+    f.writelines(lines)
+os.chmod(tmp, 0o600)
+os.replace(tmp, env_file)
+print(tunnel_status)
+"
+
+_syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 echo "hostname:${_syn_hostname}"
 ```
 
@@ -457,7 +523,7 @@ This catches typos before the value is used as the GitHub App webhook URL in Pha
 Read the public hostname if Cloudflare was configured (empty string if not):
 
 ```bash
-_syn_webhook_host=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+_syn_webhook_host=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 ```
 
 If `_syn_webhook_host` is set, the webhook URL will be `https://${_syn_webhook_host}/api/v1/github/webhook`. If not set, webhooks will only work locally.
@@ -485,13 +551,32 @@ Generate the webhook secret, copy it to the user's clipboard, and save it to `.e
   else \
     _clip=""; \
   fi && \
-  sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=$_wh_secret|" "$HOME/.syntropic137/.env" && \
-  rm -f "$HOME/.syntropic137/.env.bak" && \
+  printf '%s' "$_wh_secret" | python3 -c "
+import sys, os, tempfile
+key = 'SYN_GITHUB_WEBHOOK_SECRET'
+val = sys.stdin.readline().strip()
+env_file = os.path.expanduser('~/.syntropic137/.env')
+lines, found = [], False
+with open(env_file) as f:
+    for line in f:
+        if line.startswith(key + '='):
+            lines.append(key + '=' + val + '\n')
+            found = True
+        else:
+            lines.append(line)
+if not found:
+    lines.append(key + '=' + val + '\n')
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(env_file))
+with os.fdopen(fd, 'w') as f:
+    f.writelines(lines)
+os.chmod(tmp, 0o600)
+os.replace(tmp, env_file)
+" && \
   if [ -n "$_clip" ]; then \
     echo "Webhook secret generated, copied to clipboard, and saved to .env."; \
   else \
     echo "Webhook secret generated and saved to .env."; \
-    echo "Clipboard not available — retrieve it with: grep SYN_GITHUB_WEBHOOK_SECRET ~/.syntropic137/.env | cut -d= -f2"; \
+    echo "Clipboard not available — retrieve it with: grep SYN_GITHUB_WEBHOOK_SECRET ~/.syntropic137/.env | cut -d= -f2-"; \
   fi && \
   unset _wh_secret _clip
 ```
@@ -542,12 +627,16 @@ If a `.pem` is found, tell the user:
 > `<filename>`
 >
 > Is this the one? (Or tell me the full path if it downloaded elsewhere.)
+>
+> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location. The contents never enter this conversation. *(If you chose 1Password backup, a local script reads it to store in your vault — still outside this chat.)*
 
 If no `.pem` is found, tell the user:
 
 > **Private key:** Click "Generate a private key" on the app settings page. It downloads a `.pem` file (usually to `~/Downloads/`). Tell me the file path when it is downloaded.
+>
+> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location.
 
-**Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move.
+**Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move. *(Exception: if you chose 1Password backup in Phase 9, the PEM contents are read by a local Python script and sent to `op item create` via stdin — never through Claude's context window.)*
 
 Once the user confirms the path, move the `.pem` to the secrets directory and set permissions. Back up any existing key first. **NEVER use Read, cat, or any tool to view the `.pem` contents — only move the file:**
 
@@ -705,7 +794,7 @@ curl -sf http://localhost:8137/health
 Then check if a public hostname is configured:
 
 ```bash
-_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 ```
 
 Present the post-setup summary to the user. If a public hostname is configured, show both local and public URLs:
