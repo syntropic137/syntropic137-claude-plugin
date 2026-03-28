@@ -199,7 +199,7 @@ Store the selections for use in later phases. Optional features can be added lat
 
 Before collecting any credentials, reassure the user:
 
-> **A note on security:** The next few phases involve API keys, tokens, and a private key. None of these will ever enter this conversation. Every secret is handled through your shell — I provide the commands, but the values stay between you and your filesystem. You can verify this yourself: every sensitive command uses the `!` prefix, which runs in your terminal outside of my context. See `SECURITY.md` in the plugin repo for the full security model.
+> **A note on security:** The next few phases involve API keys, tokens, and a private key. None of these will ever enter this conversation. Every secret is handled through your shell — I provide the commands, but the values stay between you and your filesystem. You can verify this yourself: every command where you type or paste a credential uses the `!` prefix, which runs in your terminal outside of my context. See `SECURITY.md` in the plugin repo for the full security model.
 
 ---
 
@@ -286,7 +286,7 @@ Ask the user for the tunnel token using a terminal command. The command accepts 
 
 > Run this in your terminal to save the tunnel token without exposing it in the chat:
 > ```
-> ! read -rsp "Paste the Cloudflare install command or token: " _syn_raw && printf '\n' && _syn_tok=$(echo "$_syn_raw" | grep -oE 'eyJ[A-Za-z0-9_-]+' | tail -1) && if [ -n "$_syn_tok" ]; then sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."; else echo "ERROR: Could not extract token. Make sure it starts with eyJ. Try pasting just the token."; fi && unset _syn_raw _syn_tok
+> ! read -rsp "Paste the Cloudflare install command or token: " _syn_raw && printf '\n' && _syn_tok=$(echo "$_syn_raw" | grep -oE 'eyJ[A-Za-z0-9_.=-]+' | tail -1) && if [ -n "$_syn_tok" ]; then sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=$_syn_tok|" "$HOME/.syntropic137/.env" && rm -f "$HOME/.syntropic137/.env.bak" && echo "Token saved."; else echo "ERROR: Could not extract token. Make sure it starts with eyJ. Try pasting just the token."; fi && unset _syn_raw _syn_tok
 > ```
 >
 > **Note:** Cloudflare tokens always start with `eyJ` (base64 JSON). The command extracts it automatically whether you paste the full install command or just the token.
@@ -393,7 +393,7 @@ If any `.env` key does not already exist as a placeholder, append it instead of 
 Now handle the private key. First, check `~/Downloads` for the most recently downloaded `.pem` file:
 
 ```bash
-ls -t "$HOME/Downloads/"*.pem 2>/dev/null | head -1
+find "$HOME/Downloads" -maxdepth 1 -name '*.pem' -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null | head -1
 ```
 
 If a `.pem` is found, tell the user:
@@ -411,11 +411,18 @@ If no `.pem` is found, tell the user:
 
 **Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move.
 
-Once the user confirms the path, move the `.pem` to the secrets directory and set permissions. **NEVER use Read, cat, or any tool to view the `.pem` contents — only move the file:**
+Once the user confirms the path, move the `.pem` to the secrets directory and set permissions. Back up any existing key first. **NEVER use Read, cat, or any tool to view the `.pem` contents — only move the file:**
 
 ```bash
-mv "<user-provided-path>" "$HOME/.syntropic137/secrets/github-app-private-key.pem" && \
-  chmod 600 "$HOME/.syntropic137/secrets/github-app-private-key.pem" && \
+_dest="$HOME/.syntropic137/secrets/github-app-private-key.pem" && \
+  if [ -e "$_dest" ]; then \
+    _bak="${_dest}.$(date +'%Y%m%d-%H%M%S').bak" && \
+    mv "$_dest" "$_bak" && \
+    echo "Existing key backed up to: $_bak"; \
+  fi && \
+  mv "<user-provided-path>" "$_dest" && \
+  chmod 600 "$_dest" && \
+  unset _dest _bak && \
   echo "Private key moved to secrets/ (original removed)."
 ```
 

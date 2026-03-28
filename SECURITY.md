@@ -18,7 +18,7 @@ This plugin handles API keys, tokens, and private keys during setup. Every secre
 | 5 — API Key | `ANTHROPIC_API_KEY` | `! read -rsp` → `sed` to `.env` | Yes |
 | 6 — Infra secrets | DB, Redis, MinIO passwords | `openssl rand -hex 32 >` file | Yes |
 | 7 — Cloudflare | `CLOUDFLARE_TUNNEL_TOKEN` | `! read -rsp` → auto-extract `eyJ...` token → `sed` to `.env` | Yes |
-| 8 — GitHub App | Webhook secret | `! openssl rand -hex 20 | pbcopy` → clipboard only | Yes |
+| 8 — GitHub App | Webhook secret | `! openssl rand -hex 20` → clipboard + `sed` to `.env` | Yes |
 | 8 — GitHub App | Private key `.pem` | `mv` to secrets dir, `chmod 600`, original deleted from Downloads | Yes |
 | 9 — 1Password | All secrets | Python reads disk → stdin pipe to `op` | Yes |
 
@@ -44,18 +44,19 @@ The secret reaches the clipboard and a temp file (for `.env` write) but never ap
 
 ## Cloudflare Token Parsing
 
-Cloudflare presents tunnel tokens inside an install command (`cloudflared service install eyJ...`). The setup flow accepts either the full command or a bare token and auto-extracts the `eyJ`-prefixed token (base64 JSON). This matches the pattern in `syntropic137/infra/scripts/cloudflare_tunnel.py:extract_token()`.
+Cloudflare presents tunnel tokens inside an install command (`cloudflared service install eyJ...`). The setup flow accepts either the full command or a bare token and auto-extracts the `eyJ`-prefixed JWT token (base64 JSON with dot-separated segments). This matches the pattern in the main syntropic137 repo (`infra/scripts/cloudflare_tunnel.py:extract_token()`).
 
 ## Private Key Handling
 
 The setup flow for GitHub App private keys:
 
 1. Auto-detects the most recent `.pem` in `~/Downloads/` (or user provides path)
-2. Moves the `.pem` to `~/.syntropic137/secrets/github-app-private-key.pem` with `chmod 600`
-3. Deletes the original from Downloads — only the secrets directory copy remains
-4. `.env` stores the container-internal path (`/run/secrets/github-app-private-key.pem`)
+2. If an existing key is present in secrets dir, backs it up with a timestamp before replacing
+3. Moves the `.pem` to `~/.syntropic137/secrets/github-app-private-key.pem` with `chmod 600`
+4. Deletes the original from the source location — only the secrets directory copy remains
+5. `.env` stores the container-internal path (`/run/secrets/github-app-private-key.pem`)
 
-The adapter reads the raw `.pem` directly via `decode_private_key()` in `client_jwt.py` (supports both raw PEM and legacy base64-encoded keys per syntropic137/syntropic137#363).
+The adapter in the main syntropic137 repo reads the raw `.pem` directly via `decode_private_key()` in `packages/syn-adapters/.../client_jwt.py` (supports both raw PEM and legacy base64-encoded keys per syntropic137/syntropic137#363).
 
 ## Threat Model
 
