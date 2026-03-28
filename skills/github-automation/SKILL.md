@@ -45,7 +45,7 @@ The manifest flow:
 1. Opens browser to GitHub App creation page with pre-filled permissions
 2. Polls for completion (~5 min timeout)
 3. Downloads credentials: App ID, slug, PEM key, webhook secret
-4. Stores in `.env` as `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_PRIVATE_KEY`, `SYN_GITHUB_WEBHOOK_SECRET`
+4. Stores in `.env` as `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`; PEM saved to `secrets/github-app-private-key.pem` (mounted as Docker secret)
 
 **Existing App (manual):**
 ```bash
@@ -76,7 +76,8 @@ just dev-webhooks-logs    # View proxy logs
 |----------|---------|
 | `SYN_GITHUB_APP_ID` | GitHub App ID |
 | `SYN_GITHUB_APP_NAME` | GitHub App slug |
-| `SYN_GITHUB_PRIVATE_KEY` | Base64-encoded PEM private key |
+| `SYN_GITHUB_PRIVATE_KEY` | Base64-encoded PEM private key (legacy/dev fallback) |
+| `SYN_GITHUB_APP_PRIVATE_KEY_FILE` | PEM file path (selfhost — set by compose via Docker secret) |
 | `SYN_GITHUB_WEBHOOK_SECRET` | Webhook signature verification |
 | `DEV__SMEE_URL` | Smee proxy URL (dev only) |
 
