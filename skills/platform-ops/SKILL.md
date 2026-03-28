@@ -31,6 +31,7 @@ Syntropic137 orchestrates AI agent execution in isolated Docker workspaces and c
 | MinIO | 9000 (S3), 9001 (console) | Artifact storage |
 | Envoy Proxy | 8081, 9901 (admin) | Shared proxy for API key injection |
 | Dashboard | 5173 (dev) | Vite + React real-time dashboard |
+| Pulse UI | 5174 (dev), `/pulse/` (gateway) | Activity heatmap / contribution visualization |
 
 ## Common Tasks
 
@@ -159,7 +160,8 @@ just test-stack-down       # Tear down test infrastructure
 | `ANTHROPIC_API_KEY` | Required for agent execution |
 | `GITHUB_TOKEN` | Required for GitHub App integration |
 | `GITHUB_APP_ID` | GitHub App ID |
-| `SYN_GITHUB_PRIVATE_KEY` | GitHub App private key |
+| `SYN_GITHUB_PRIVATE_KEY` | GitHub App private key (legacy/dev — base64 PEM) |
+| `SYN_GITHUB_APP_PRIVATE_KEY_FILE` | GitHub App private key file path (selfhost — set by compose, Docker secret mount) |
 | `GITHUB_WEBHOOK_SECRET` | Webhook signature verification |
 | `APP_ENVIRONMENT` | `development`, `beta`, `staging` |
 | `DATABASE_URL` | PostgreSQL connection (auto in Docker) |
@@ -174,7 +176,8 @@ syntropic137/
 ├── apps/
 │   ├── syn-api/               # FastAPI server (routes + v1 services)
 │   ├── syn-cli/               # CLI tool ("syn")
-│   └── syn-dashboard-ui/      # React dashboard (Vite)
+│   ├── syn-dashboard-ui/      # React dashboard (Vite)
+│   └── syn-pulse-ui/          # Activity heatmap UI (Vite, served at /pulse/)
 ├── packages/
 │   ├── syn-domain/            # Domain events, aggregates, projections
 │   ├── syn-adapters/          # Orchestration + observability adapters
