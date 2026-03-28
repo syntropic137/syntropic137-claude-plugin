@@ -119,7 +119,8 @@ Re-run any stage: `just setup-stage <stage_name>`
 | `APP_ENVIRONMENT` | Yes | `development`, `selfhost`, `beta`, `staging`, `production` |
 | `SYN_GITHUB_APP_ID` | For GitHub | GitHub App ID |
 | `SYN_GITHUB_APP_NAME` | For GitHub | GitHub App slug |
-| `SYN_GITHUB_PRIVATE_KEY` | For GitHub | Base64-encoded PEM private key |
+| `SYN_GITHUB_PRIVATE_KEY` | For GitHub | Base64-encoded PEM private key (legacy/dev fallback) |
+| `SYN_GITHUB_APP_PRIVATE_KEY_FILE` | Selfhost | Set by compose — points to Docker secret mount. Users place PEM at `secrets/github-app-private-key.pem` |
 | `SYN_GITHUB_WEBHOOK_SECRET` | For GitHub | Webhook HMAC secret |
 | `ANTHROPIC_API_KEY` | For agents | Anthropic API key |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Alt agents | Alternative to API key |
@@ -210,7 +211,7 @@ just secrets-unseal     # Decrypt from .enc files
 Located in `infra/docker/secrets/`:
 - `db-password.secret` (32-byte hex, permissions 600)
 - `redis-password.secret` (32-byte hex, permissions 600)
-- `github-private-key.pem` (optional, base64 in .env preferred)
+- `github-app-private-key.pem` (Docker secret mount in selfhost compose — tmpfs, never on disk)
 - `cloudflare-tunnel-token.secret` (if using tunnel)
 
 ## Docker Compose Stack
@@ -238,7 +239,7 @@ Located in `infra/docker/secrets/`:
 | MinIO | `syn-minio` | 9000/9001 | S3 artifact storage |
 | Envoy Proxy | `syn-envoy` | 8081/9901 | Token injection proxy |
 | Dashboard | (host process) | 5173 | Vite + React |
-| Pulse | (host process) | 5174 | Metrics UI |
+| Pulse UI | (host process / gateway `/pulse/`) | 5174 | Activity heatmap / contribution visualization |
 
 ### Selfhost Security Hardening
 

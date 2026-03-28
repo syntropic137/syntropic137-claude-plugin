@@ -60,6 +60,9 @@ grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "ap
 # GitHub App configured?
 grep -q 'SYN_GITHUB_APP_ID=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "github:yes" || echo "github:no"
 
+# GitHub App PEM present?
+test -s "$HOME/.syntropic137/secrets/github-app-private-key.pem" && echo "pem:yes" || echo "pem:no"
+
 # Cloudflare configured?
 grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "cloudflare:yes" || echo "cloudflare:no"
 
@@ -84,6 +87,7 @@ Syntropic137 — Existing Installation Detected
  Secrets                ✓ / ✗
  API key                ✓ / ✗
  GitHub App             ✓ / ✗
+ GitHub App PEM         ✓ / ✗
  Cloudflare tunnel      ✓ / ✗
  1Password backup       ✓ / ✗
  Containers             Running / Stopped / Not pulled
@@ -432,12 +436,7 @@ Verify the key file exists (size check only, never read contents):
 test -s "$HOME/.syntropic137/secrets/github-app-private-key.pem" && echo "pem:ok" || echo "pem:missing"
 ```
 
-Write the key path to `.env` (this is the container-internal path, not the host path). The adapter reads the raw `.pem` directly — no base64 encoding needed:
-
-```bash
-sed -i.bak "s|^SYN_GITHUB_APP_PRIVATE_KEY_PATH=.*|SYN_GITHUB_APP_PRIVATE_KEY_PATH=/run/secrets/github-app-private-key.pem|" "$HOME/.syntropic137/.env"
-rm -f "$HOME/.syntropic137/.env.bak"
-```
+That is all that is needed for the private key. The compose file automatically mounts `secrets/github-app-private-key.pem` as a Docker secret (tmpfs — never written to disk) and sets `SYN_GITHUB_APP_PRIVATE_KEY_FILE=/run/secrets/github_app_private_key` on the containers. No `.env` entry is required for the key path.
 
 ---
 
@@ -583,6 +582,8 @@ Syntropic137 is running!
 
  Dashboard:   http://localhost:8137 (local)
  Dashboard:   https://<hostname> (public — via Cloudflare tunnel)
+ Pulse UI:    http://localhost:8137/pulse/ (local)
+ Pulse UI:    https://<hostname>/pulse/ (public)
  API Docs:    http://localhost:8137/docs (local)
  API Docs:    https://<hostname>/docs (public)
  Version:     <version from health endpoint>
@@ -590,11 +591,12 @@ Syntropic137 is running!
  WHAT'S NEXT:
 
  1. Open the dashboard -- see your platform overview
- 2. Create your first workflow:
+ 2. Open Pulse -- view the contribution heatmap and activity
+ 3. Create your first workflow:
     "Create a workflow that reviews PRs on my repo"
- 3. Trigger a manual run:
+ 4. Trigger a manual run:
     /syn-workflow run <workflow-id> --task "Hello world"
- 4. Set up automatic PR triggers:
+ 5. Set up automatic PR triggers:
     "Set up triggers for my-org/my-repo"
 
  Run /syn-setup again anytime to add features or update.
@@ -608,6 +610,7 @@ Syntropic137 is running!
 ═══════════════════════════════════════════════════
 
  Dashboard:   http://localhost:8137
+ Pulse UI:    http://localhost:8137/pulse/
  API Docs:    http://localhost:8137/docs
  Version:     <version from health endpoint>
  ...
