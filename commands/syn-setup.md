@@ -157,6 +157,7 @@ usage() {
   echo "Usage: set-secret.sh <KEY_NAME>"
   echo ""
   echo "Prompts for a value and writes it to .env securely."
+  echo "The value never appears in process args or shell history."
   echo ""
   echo "Examples:"
   echo "  set-secret.sh ANTHROPIC_API_KEY"
@@ -168,10 +169,24 @@ usage() {
 [ -z "${1:-}" ] && usage
 
 KEY_NAME="$1"
+
+# Validate key name (alphanumeric + underscore only)
+if ! echo "$KEY_NAME" | grep -qE '^[A-Z0-9_]+$'; then
+  echo "Error: invalid key name. Use only A-Z, 0-9, underscore." >&2
+  exit 1
+fi
+
 read -rsp "${KEY_NAME}: " _val && printf '\n'
 
 if [ -z "$_val" ]; then
   echo "Error: empty value." >&2
+  exit 1
+fi
+
+# Reject values containing newlines
+if echo "$_val" | grep -q $'\n'; then
+  echo "Error: value must not contain newlines." >&2
+  unset _val
   exit 1
 fi
 
@@ -184,12 +199,34 @@ if [ "$KEY_NAME" = "CLOUDFLARE_TUNNEL_TOKEN" ]; then
   unset _extracted
 fi
 
-if grep -q "^${KEY_NAME}=" "$ENV_FILE" 2>/dev/null; then
-  sed -i.bak "s|^${KEY_NAME}=.*|${KEY_NAME}=${_val}|" "$ENV_FILE"
-  rm -f "$ENV_FILE.bak"
-else
-  echo "${KEY_NAME}=${_val}" >> "$ENV_FILE"
-fi
+# Rewrite .env via Python so the secret never appears in process args
+# (sed would expose it via /proc/pid/cmdline or ps)
+python3 -c "
+import sys, os
+
+key = sys.argv[1]
+val = sys.stdin.readline().rstrip('\n')
+env_file = os.path.expanduser('~/.syntropic137/.env')
+
+lines = []
+found = False
+if os.path.exists(env_file):
+    with open(env_file) as f:
+        for line in f:
+            if line.startswith(key + '='):
+                lines.append(key + '=' + val + '\n')
+                found = True
+            else:
+                lines.append(line)
+
+if not found:
+    lines.append(key + '=' + val + '\n')
+
+with open(env_file, 'w') as f:
+    f.writelines(lines)
+
+os.chmod(env_file, 0o600)
+" "$KEY_NAME" <<< "$_val"
 
 unset _val
 echo "✓ ${KEY_NAME} saved to .env"
@@ -259,7 +296,7 @@ Before collecting any credentials, reassure the user:
 > 1. I give you a short command starting with `!`
 > 2. You paste or type that command into this prompt and press Enter
 > 3. Your terminal prompts you for the secret value — **the text you type will be hidden** (no characters appear, that is normal)
-> 4. Press Enter to confirm — the script saves it to your `.env` file and prints `✓ saved`
+> 4. Press Enter to confirm — the script saves it to your `.env` file and prints `✓ <KEY_NAME> saved to .env`
 >
 > That is it. The value never appears on screen or in this conversation.
 
