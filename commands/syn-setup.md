@@ -427,13 +427,13 @@ Tell the user:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **token** (the long `eyJ...` string after `install`).
+>    Copy the **full install command** that Cloudflare shows you — you do NOT need to extract the token yourself. Paste the whole thing.
 
 Now have the user save the tunnel token and hostname. Open the `.env` file:
 
-> Now save the tunnel token and your public hostname. Copy the token to your clipboard, then:
+> Now save the tunnel token and your public hostname.
 >
-> Paste one of these commands into the Claude Code prompt and press Enter:
+> Paste one of these commands into the Claude Code prompt to open your config:
 
 **On macOS:**
 > ```
@@ -446,16 +446,29 @@ Now have the user save the tunnel token and hostname. Open the `.env` file:
 > ```
 
 > Find the **CLOUDFLARE TUNNEL** section and fill in:
-> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the token (starts with `eyJ...`)
+> - `CLOUDFLARE_TUNNEL_TOKEN=` — paste the **full command** Cloudflare gave you (e.g., `cloudflared service install eyJ...`). It is OK to paste the whole thing — I will extract the token automatically after you save.
 > - `SYN_PUBLIC_HOSTNAME=` — type the hostname you configured (e.g., `syn.yourdomain.com`)
 >
 > Save and close the file.
 
-After the user confirms, enforce permissions, verify both values, and read back the hostname for confirmation:
+After the user confirms, enforce permissions, auto-extract the token if they pasted the full command, verify both values, and read back the hostname for confirmation:
 
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
-grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "tunnel:set" || echo "tunnel:missing"
+
+# Auto-extract eyJ... token if user pasted full cloudflared command
+_raw_token=$(grep '^CLOUDFLARE_TUNNEL_TOKEN=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2)
+_clean_token=$(echo "$_raw_token" | grep -oE 'eyJ[A-Za-z0-9_.=-]+' | tail -1)
+if [ -n "$_clean_token" ] && [ "$_clean_token" != "$_raw_token" ]; then
+  sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=${_clean_token}|" "$HOME/.syntropic137/.env"
+  rm -f "$HOME/.syntropic137/.env.bak"
+  echo "tunnel:extracted (cleaned up full command → token only)"
+elif [ -n "$_clean_token" ]; then
+  echo "tunnel:set"
+else
+  echo "tunnel:missing"
+fi
+
 _syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
 echo "hostname:${_syn_hostname}"
 ```
