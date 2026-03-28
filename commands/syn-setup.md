@@ -495,9 +495,12 @@ with open(env_file) as f:
         else:
             lines.append(line)
 
-with open(env_file, 'w') as f:
+import tempfile
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(env_file))
+with os.fdopen(fd, 'w') as f:
     f.writelines(lines)
-os.chmod(env_file, 0o600)
+os.chmod(tmp, 0o600)
+os.replace(tmp, env_file)
 print(tunnel_status)
 "
 
@@ -548,8 +551,27 @@ Generate the webhook secret, copy it to the user's clipboard, and save it to `.e
   else \
     _clip=""; \
   fi && \
-  sed -i.bak "s|^SYN_GITHUB_WEBHOOK_SECRET=.*|SYN_GITHUB_WEBHOOK_SECRET=$_wh_secret|" "$HOME/.syntropic137/.env" && \
-  rm -f "$HOME/.syntropic137/.env.bak" && \
+  printf '%s' "$_wh_secret" | python3 -c "
+import sys, os, tempfile
+key = 'SYN_GITHUB_WEBHOOK_SECRET'
+val = sys.stdin.readline().strip()
+env_file = os.path.expanduser('~/.syntropic137/.env')
+lines, found = [], False
+with open(env_file) as f:
+    for line in f:
+        if line.startswith(key + '='):
+            lines.append(key + '=' + val + '\n')
+            found = True
+        else:
+            lines.append(line)
+if not found:
+    lines.append(key + '=' + val + '\n')
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(env_file))
+with os.fdopen(fd, 'w') as f:
+    f.writelines(lines)
+os.chmod(tmp, 0o600)
+os.replace(tmp, env_file)
+" && \
   if [ -n "$_clip" ]; then \
     echo "Webhook secret generated, copied to clipboard, and saved to .env."; \
   else \
@@ -606,7 +628,7 @@ If a `.pem` is found, tell the user:
 >
 > Is this the one? (Or tell me the full path if it downloaded elsewhere.)
 >
-> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location. The contents stay between you and your filesystem.
+> **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location. The contents never enter this conversation. *(If you chose 1Password backup, a local script reads it to store in your vault — still outside this chat.)*
 
 If no `.pem` is found, tell the user:
 
@@ -614,7 +636,7 @@ If no `.pem` is found, tell the user:
 >
 > **Note:** I will NOT read or open this file — I only need the path so I can move it to a secure location.
 
-**Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move.
+**Security note:** I will only use the file path to move the key to a secure location. I will **never** open or read the `.pem` file — the contents stay on your filesystem. The original is deleted from Downloads after the move. *(Exception: if you chose 1Password backup in Phase 9, the PEM contents are read by a local Python script and sent to `op item create` via stdin — never through Claude's context window.)*
 
 Once the user confirms the path, move the `.pem` to the secrets directory and set permissions. Back up any existing key first. **NEVER use Read, cat, or any tool to view the `.pem` contents — only move the file:**
 
