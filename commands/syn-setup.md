@@ -55,19 +55,19 @@ for f in db-password.secret redis-password.secret minio-password.secret; do
 done
 
 # API key configured?
-grep -q 'ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:yes" || echo "apikey:no"
+grep -q '^ANTHROPIC_API_KEY=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "apikey:yes" || echo "apikey:no"
 
 # GitHub App configured?
-grep -q 'SYN_GITHUB_APP_ID=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "github:yes" || echo "github:no"
+grep -q '^SYN_GITHUB_APP_ID=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "github:yes" || echo "github:no"
 
 # GitHub App PEM present?
 test -s "$HOME/.syntropic137/secrets/github-app-private-key.pem" && echo "pem:yes" || echo "pem:no"
 
 # Cloudflare configured?
-grep -q 'CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "cloudflare:yes" || echo "cloudflare:no"
+grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.' "$HOME/.syntropic137/.env" 2>/dev/null && echo "cloudflare:yes" || echo "cloudflare:no"
 
 # 1Password backed up?
-grep -q 'SYN_1PASSWORD_BACKUP=true' "$HOME/.syntropic137/.env" 2>/dev/null && echo "1password:yes" || echo "1password:no"
+grep -q '^SYN_1PASSWORD_BACKUP=true' "$HOME/.syntropic137/.env" 2>/dev/null && echo "1password:yes" || echo "1password:no"
 
 # Containers running?
 docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || echo "containers:none"
@@ -151,7 +151,7 @@ If any file failed to download, show the error and suggest the user check their 
 **Stop here** if the compose file or `.env` failed — both are required. The `.env` template must contain actual configuration (look for `APP_ENVIRONMENT` as a sanity check):
 
 ```bash
-grep -q 'APP_ENVIRONMENT' "$HOME/.syntropic137/.env" 2>/dev/null && echo "env-template:valid" || echo "env-template:invalid"
+grep -q '^APP_ENVIRONMENT=' "$HOME/.syntropic137/.env" 2>/dev/null && echo "env-template:valid" || echo "env-template:invalid"
 ```
 
 If the `.env` is invalid, the setup cannot proceed — secrets would be written to a garbage file.
@@ -470,20 +470,38 @@ After the user confirms, enforce permissions, auto-extract the token if they pas
 ```bash
 chmod 600 "$HOME/.syntropic137/.env"
 
-# Auto-extract eyJ... token if user pasted full cloudflared command
-_raw_token=$(grep '^CLOUDFLARE_TUNNEL_TOKEN=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2)
-_clean_token=$(echo "$_raw_token" | grep -oE 'eyJ[A-Za-z0-9_.=-]+' | tail -1)
-if [ -n "$_clean_token" ] && [ "$_clean_token" != "$_raw_token" ]; then
-  sed -i.bak "s|^CLOUDFLARE_TUNNEL_TOKEN=.*|CLOUDFLARE_TUNNEL_TOKEN=${_clean_token}|" "$HOME/.syntropic137/.env"
-  rm -f "$HOME/.syntropic137/.env.bak"
-  echo "tunnel:extracted (cleaned up full command → token only)"
-elif [ -n "$_clean_token" ]; then
-  echo "tunnel:set"
-else
-  echo "tunnel:missing"
-fi
+# Auto-extract eyJ... token if user pasted full cloudflared command.
+# Uses Python so the token never appears in process args (sed would leak via ps).
+python3 -c "
+import re, os
 
-_syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+env_file = os.path.expanduser('~/.syntropic137/.env')
+lines = []
+tunnel_status = 'tunnel:missing'
+
+with open(env_file) as f:
+    for line in f:
+        if line.startswith('CLOUDFLARE_TUNNEL_TOKEN='):
+            raw = line.strip().split('=', 1)[1]
+            m = re.search(r'eyJ[A-Za-z0-9_.=-]+', raw)
+            token = m.group(0) if m else raw
+            lines.append('CLOUDFLARE_TUNNEL_TOKEN=' + token + '\n')
+            if not token:
+                tunnel_status = 'tunnel:missing'
+            elif token != raw:
+                tunnel_status = 'tunnel:extracted (cleaned up full command → token only)'
+            else:
+                tunnel_status = 'tunnel:set'
+        else:
+            lines.append(line)
+
+with open(env_file, 'w') as f:
+    f.writelines(lines)
+os.chmod(env_file, 0o600)
+print(tunnel_status)
+"
+
+_syn_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 echo "hostname:${_syn_hostname}"
 ```
 
@@ -502,7 +520,7 @@ This catches typos before the value is used as the GitHub App webhook URL in Pha
 Read the public hostname if Cloudflare was configured (empty string if not):
 
 ```bash
-_syn_webhook_host=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+_syn_webhook_host=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 ```
 
 If `_syn_webhook_host` is set, the webhook URL will be `https://${_syn_webhook_host}/api/v1/github/webhook`. If not set, webhooks will only work locally.
@@ -536,7 +554,7 @@ Generate the webhook secret, copy it to the user's clipboard, and save it to `.e
     echo "Webhook secret generated, copied to clipboard, and saved to .env."; \
   else \
     echo "Webhook secret generated and saved to .env."; \
-    echo "Clipboard not available — retrieve it with: grep SYN_GITHUB_WEBHOOK_SECRET ~/.syntropic137/.env | cut -d= -f2"; \
+    echo "Clipboard not available — retrieve it with: grep SYN_GITHUB_WEBHOOK_SECRET ~/.syntropic137/.env | cut -d= -f2-"; \
   fi && \
   unset _wh_secret _clip
 ```
@@ -754,7 +772,7 @@ curl -sf http://localhost:8137/health
 Then check if a public hostname is configured:
 
 ```bash
-_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+_hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'")
 ```
 
 Present the post-setup summary to the user. If a public hostname is configured, show both local and public URLs:
