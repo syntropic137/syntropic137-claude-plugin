@@ -154,14 +154,18 @@ set -euo pipefail
 ENV_FILE="$HOME/.syntropic137/.env"
 
 usage() {
-  echo "Usage: set-secret.sh <KEY_NAME>"
+  echo "Usage: set-secret.sh <KEY_NAME> [--clipboard | --prompt]"
   echo ""
-  echo "Prompts for a value and writes it to .env securely."
+  echo "Saves a secret to .env securely."
   echo "The value never appears in process args or shell history."
   echo ""
+  echo "Modes:"
+  echo "  --clipboard  Read from system clipboard (default)"
+  echo "  --prompt     Prompt for interactive input (use in a real terminal)"
+  echo ""
   echo "Examples:"
-  echo "  set-secret.sh ANTHROPIC_API_KEY"
-  echo "  set-secret.sh CLAUDE_CODE_OAUTH_TOKEN"
+  echo "  set-secret.sh ANTHROPIC_API_KEY              # reads from clipboard"
+  echo "  set-secret.sh ANTHROPIC_API_KEY --prompt      # interactive prompt"
   echo "  set-secret.sh CLOUDFLARE_TUNNEL_TOKEN"
   exit 1
 }
@@ -169,6 +173,7 @@ usage() {
 [ -z "${1:-}" ] && usage
 
 KEY_NAME="$1"
+MODE="${2:---clipboard}"
 
 # Validate key name (alphanumeric + underscore only)
 if ! echo "$KEY_NAME" | grep -qE '^[A-Z0-9_]+$'; then
@@ -176,17 +181,33 @@ if ! echo "$KEY_NAME" | grep -qE '^[A-Z0-9_]+$'; then
   exit 1
 fi
 
-read -rsp "${KEY_NAME}: " _val && printf '\n'
-
-if [ -z "$_val" ]; then
-  echo "Error: empty value." >&2
+# Read the value
+if [ "$MODE" = "--clipboard" ]; then
+  # Detect clipboard command
+  if command -v pbpaste >/dev/null 2>&1; then
+    _val=$(pbpaste)
+  elif command -v xclip >/dev/null 2>&1; then
+    _val=$(xclip -selection clipboard -o)
+  elif command -v xsel >/dev/null 2>&1; then
+    _val=$(xsel --clipboard --output)
+  elif command -v wl-paste >/dev/null 2>&1; then
+    _val=$(wl-paste)
+  else
+    echo "Error: no clipboard tool found. Use --prompt mode instead." >&2
+    exit 1
+  fi
+elif [ "$MODE" = "--prompt" ]; then
+  read -rsp "${KEY_NAME}: " _val && printf '\n'
+else
+  echo "Error: unknown mode '$MODE'. Use --clipboard or --prompt." >&2
   exit 1
 fi
 
-# Reject values containing newlines
-if echo "$_val" | grep -q $'\n'; then
-  echo "Error: value must not contain newlines." >&2
-  unset _val
+# Trim whitespace/newlines (clipboard often adds trailing newline)
+_val=$(echo "$_val" | tr -d '\n\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+if [ -z "$_val" ]; then
+  echo "Error: empty value. Make sure you copied the key to your clipboard first." >&2
   exit 1
 fi
 
@@ -291,14 +312,19 @@ Before collecting any credentials, reassure the user:
 
 > **A note on security:** The next few phases involve API keys, tokens, and a private key. I will never ask you to paste a secret into this chat — that would store it in conversation history.
 >
-> Instead, you will use commands that start with `!` — this runs them directly in your terminal, outside of my context. I cannot see what you type or paste. Here is how it works:
+> Instead, you will copy your secret to your clipboard, then run a short command that reads it from the clipboard and saves it to `.env`. The command runs in your terminal, outside of my context — I cannot see the value.
 >
-> 1. I give you a short command starting with `!`
-> 2. You paste or type that command into this prompt and press Enter
-> 3. Your terminal prompts you for the secret value — **the text you type will be hidden** (no characters appear, that is normal)
-> 4. Press Enter to confirm — the script saves it to your `.env` file and prints `✓ <KEY_NAME> saved to .env`
+> **How it works:**
 >
-> That is it. The value never appears on screen or in this conversation.
+> 1. Copy your secret to your clipboard (Cmd+C / Ctrl+C)
+> 2. In the Claude Code prompt, **type `!` followed by a space** — do NOT paste it, type it manually
+> 3. Then paste the rest of the command after the `!` (e.g., `~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY`)
+> 4. Press Enter — the script reads from your clipboard and saves it to `.env`
+> 5. You should see `✓ <KEY_NAME> saved to .env`
+>
+> **Important:** The `!` must be typed, not pasted as part of the command. It tells Claude Code to run the rest in your shell. If you paste the whole line including `!`, it may not enter shell mode.
+>
+> The value never appears on screen or in this conversation.
 
 ---
 
@@ -306,23 +332,28 @@ Before collecting any credentials, reassure the user:
 
 Agents need an LLM API key to run. Tell the user:
 
-> Agents need an LLM provider to run. First, get your key ready:
-> - **Anthropic API key:** https://console.anthropic.com/settings/keys (copy it to your clipboard)
-> - **Or** if you use Claude Code with an OAuth token, have that ready instead.
+> Agents need an LLM provider to run. Here is how to set your key:
 >
-> Then paste this command into the prompt and press Enter:
+> **Step 1:** Copy your API key to your clipboard:
+> - **Anthropic API key:** https://console.anthropic.com/settings/keys — click the copy button
+> - **Or** if you use Claude Code with an OAuth token, copy that instead
 >
-> **For Anthropic API key:**
-> ```
-> ! ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY
-> ```
+> **Step 2:** In this prompt, type `!` then a space, then paste the command below and press Enter:
 >
-> **Or for OAuth token:**
+> For Anthropic API key:
 > ```
-> ! ~/.syntropic137/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN
+> ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY
 > ```
 >
-> It will prompt `ANTHROPIC_API_KEY:` — paste your key and press Enter. The text stays hidden (you will not see any characters — that is expected). You should see `✓ ANTHROPIC_API_KEY saved to .env`.
+> For OAuth token:
+> ```
+> ~/.syntropic137/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN
+> ```
+>
+> So what you type looks like: `! ~/.syntropic137/set-secret.sh ANTHROPIC_API_KEY`
+> (the `!` is typed by you, then paste the rest)
+>
+> The script reads from your clipboard and saves it. You should see `✓ ANTHROPIC_API_KEY saved to .env`.
 >
 > Let me know when done.
 
@@ -381,16 +412,18 @@ Tell the user:
 >    ```
 >    cloudflared service install eyJhIjoi...
 >    ```
->    Copy the **entire command** (or just the token after `install`).
+>    Copy the **entire command** to your clipboard (or just the token after `install`).
 
 Ask the user for the tunnel token using the helper script:
 
-> Now save the tunnel token. Paste this command into the prompt and press Enter:
+> Now save the tunnel token. Copy the install command or token to your clipboard, then:
+>
+> Type `!` then a space, then paste:
 > ```
-> ! ~/.syntropic137/set-secret.sh CLOUDFLARE_TUNNEL_TOKEN
+> ~/.syntropic137/set-secret.sh CLOUDFLARE_TUNNEL_TOKEN
 > ```
 >
-> It will prompt `CLOUDFLARE_TUNNEL_TOKEN:` — paste the token (or the full `cloudflared service install ...` command, either works) and press Enter. The text stays hidden. You should see `✓ CLOUDFLARE_TUNNEL_TOKEN saved to .env`.
+> The script reads the token from your clipboard (it auto-extracts the `eyJ...` token if you copied the full command). You should see `✓ CLOUDFLARE_TUNNEL_TOKEN saved to .env`.
 
 Then ask (this is not a secret, safe to type here):
 
