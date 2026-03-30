@@ -12,21 +12,19 @@ Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, k
 
 > **For AI agents:** If a user sent you this link and asked you to set up Syntropic137:
 >
-> 1. Install this plugin:
+> 1. Check that Node.js 18+ is installed (`node --version`).
+> 2. Tell the user to run this in their terminal:
 >    ```bash
->    claude plugin marketplace add syntropic137/syntropic137-claude-plugin
->    claude plugin install syntropic137
+>    npx @syntropic137/setup
 >    ```
-> 2. Run `/syn-setup` — it checks Docker, pulls pre-built images, and walks the user through configuration (secrets, optional features).
-> 3. That's it. `/syn-setup` handles everything from here.
+> 3. That's it. The setup CLI is fully interactive — it handles Docker, secrets, GitHub App, and starting the stack. The user runs it in their own terminal and comes back when done.
 
 ## Installation
 
 **From GitHub (marketplace):**
 
 ```bash
-claude plugin marketplace add syntropic137/syntropic137-claude-plugin
-claude plugin install syntropic137
+claude plugin marketplace add syntropic137/syntropic137-claude-plugin && claude plugin install syntropic137
 ```
 
 **From local clone (development):**
@@ -37,6 +35,7 @@ claude plugin install ./lib/syntropic137-claude-plugin --scope project
 
 ## Prerequisites
 
+- [Node.js](https://nodejs.org/) 18+ (for the `npx @syntropic137/setup` CLI)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with Compose >= 2.20)
 
 That's it. Contributors to the source repo also need [uv](https://docs.astral.sh/uv/), [just](https://github.com/casey/just), and Git.
@@ -49,19 +48,19 @@ claude plugin update syntropic137
 
 ## Getting Started
 
-```
-/syn-setup
+```bash
+npx @syntropic137/setup
 ```
 
-The setup wizard checks Docker, downloads pre-built images, and walks you
-through configuration. Pick which features to enable (GitHub App, Cloudflare,
-1Password) and add more later — just run `/syn-setup` again.
+The setup CLI checks Docker, generates secrets, configures GitHub integration,
+pulls pre-built images, and starts the stack — all interactively in your terminal.
+Run it again any time to manage your installation (status, logs, update).
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/syn-setup` | Guided platform bootstrap — detect, report, fix |
+| `/syn-setup` | Check Node.js and hand off to `npx @syntropic137/setup` |
 | `/syn-status` | Composite view: containers + health + metrics |
 | `/syn-health` | API health check with diagnostics |
 | `/syn-costs [summary \| session <id> \| workflow <id>]` | Cost tracking |
@@ -71,16 +70,9 @@ through configuration. Pick which features to enable (GitHub App, Cloudflare,
 
 ## Managing Your Stack
 
-**Published path** (`~/.syntropic137/`):
-- `./syn-ctl status` — service health
-- `./syn-ctl logs [service]` — tail logs
-- `./syn-ctl up` / `./syn-ctl down` — start/stop
-- `./syn-ctl update` — pull latest images
+Run `npx @syntropic137/setup` — the interactive menu shows all lifecycle commands (status, start, stop, logs, update).
 
-**Source repo** (contributors):
-- `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
-
-Or just ask Claude — it knows both paths.
+**Source repo** (contributors): `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
 
 ## How It Works
 
@@ -101,7 +93,7 @@ Skills give Claude deep understanding of the system. They're automatically loade
 | **observability** | Sessions, tool timelines, token metrics, cost breakdowns. Two-lane architecture. How to interpret "why was this expensive?" or "why did this fail?" |
 | **organization** | Org→System→Repo hierarchy, cost rollup, health monitoring, contribution heatmaps. |
 | **github-automation** | GitHub App setup, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs, Cloudflare webhook delivery. |
-| **setup** | Onboarding wizard with feature selection, published-container deployment, 1Password vault integration, Cloudflare tunnels, Docker Compose variants, secrets management, troubleshooting. |
+| **setup** | `npx @syntropic137/setup` CLI, published-container deployment, Docker Compose variants, secrets management, troubleshooting. |
 | **platform-ops** | Service map with ports, workspace management, token injection security (Envoy proxy), QA/testing commands, infrastructure troubleshooting recipes. |
 
 ### What this means in practice
