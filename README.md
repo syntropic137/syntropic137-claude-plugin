@@ -24,8 +24,7 @@ Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, k
 **From GitHub (marketplace):**
 
 ```bash
-claude plugin marketplace add syntropic137/syntropic137-claude-plugin
-claude plugin install syntropic137
+claude plugin marketplace add syntropic137/syntropic137-claude-plugin && claude plugin install syntropic137
 ```
 
 **From local clone (development):**
