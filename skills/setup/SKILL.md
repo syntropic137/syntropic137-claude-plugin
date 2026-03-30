@@ -1,11 +1,22 @@
 ---
 name: setup
-description: Syntropic137 platform setup — 14-stage onboarding wizard, 1Password, Cloudflare tunnels, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
+description: Syntropic137 platform setup — npx setup CLI, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
 ---
 
 # Setup & Infrastructure — Syntropic137
 
 Use this knowledge when the user asks about setting up the platform, configuring secrets, managing the Docker stack, understanding the justfile recipes, or troubleshooting infrastructure issues.
+
+## Quick Setup (Recommended)
+
+Self-host setup is handled by a single npx command:
+
+```bash
+npx @syntropic137/setup        # Existing install — detect and update/add features
+npx @syntropic137/setup init   # Fresh install — full interactive wizard
+```
+
+The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and runs this tool.
 
 ## API URL — `SYN_API_URL`
 
@@ -36,15 +47,16 @@ SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 - Events: `$SYN_API_URL/api/v1/events/sessions/<id>`
 - Triggers: `$SYN_API_URL/api/v1/triggers`
 
-Every plugin command resolves this before making API calls. If the user is on a remote server, `SYN_PUBLIC_HOSTNAME` gets set during Cloudflare tunnel setup (Phase 8 of `/syn-setup`).
+Every plugin command resolves this before making API calls. If the user is on a remote server, `SYN_PUBLIC_HOSTNAME` gets set during Cloudflare tunnel setup (handled by `npx @syntropic137/setup`).
 
 ## Onboarding Paths
 
 ### Published Path (Self-Hosters)
 
-Self-hosters install to `~/.syntropic137/` and use `syn-ctl` for management. No `uv`, `just`, or source repo required.
+Self-hosters run `npx @syntropic137/setup` (or `/syn-setup` in Claude Code) to install to `~/.syntropic137/`. After setup, use `syn-ctl` for management. No `uv`, `just`, or source repo required.
 
 ```bash
+npx @syntropic137/setup       # Interactive setup (or `npx @syntropic137/setup init` for fresh)
 cd ~/.syntropic137
 ./syn-ctl up                  # Start the stack
 ./syn-ctl down                # Stop the stack
@@ -82,7 +94,7 @@ just onboard --non-interactive  # CI/CD mode (reads from env vars)
 just onboard --stage <name>   # Re-run a specific stage
 ```
 
-### Setup Stages (14 total)
+### Setup Stages (14 total, handled by `npx @syntropic137/setup`)
 
 | # | Stage | What It Does | Can Re-run? |
 |---|-------|-------------|-------------|
