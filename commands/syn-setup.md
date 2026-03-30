@@ -56,4 +56,21 @@ Tell the user:
 
 > Run that command in a separate terminal. It's fully interactive — it'll walk you through Docker checks, secrets, GitHub App creation, and starting the stack. Come back here when it's done and I can help verify everything is working.
 
-**Do NOT run the npx command yourself.** Wait for the user to come back and confirm completion, then optionally verify by checking `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml ps` or hitting `http://127.0.0.1:8137/health`.
+**Do NOT run the npx command yourself.** Wait for the user to come back and confirm completion.
+
+---
+
+## Step 4 — Verify (after user returns)
+
+Once the user confirms the setup CLI finished, verify the stack is healthy:
+
+```bash
+docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" ps --format "table {{.Name}}\t{{.Status}}"
+```
+
+```bash
+curl -sf http://127.0.0.1:8137/health
+```
+
+- If all containers are running and the health endpoint returns OK: tell the user setup is complete and suggest next steps (open the dashboard at http://localhost:8137, try `/syn-status`, create a workflow).
+- If containers are down or health fails: check logs with `docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" logs --tail=30` and help troubleshoot.
