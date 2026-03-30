@@ -16,7 +16,7 @@ npx @syntropic137/setup        # Existing install — detect and update/add feat
 npx @syntropic137/setup init   # Fresh install — full interactive wizard
 ```
 
-The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and runs this tool.
+The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and then instructs the user to run `npx @syntropic137/setup` in their own terminal.
 
 ## API URL — `SYN_API_URL`
 
@@ -53,18 +53,14 @@ Every plugin command resolves this before making API calls. If the user is on a 
 
 ### Published Path (Self-Hosters)
 
-Self-hosters run `npx @syntropic137/setup` (or `/syn-setup` in Claude Code) to install to `~/.syntropic137/`. After setup, use `syn-ctl` for management. No `uv`, `just`, or source repo required.
+Self-hosters run `npx @syntropic137/setup` (or `/syn-setup` in Claude Code) to install to `~/.syntropic137/`. The npx CLI handles both setup and ongoing management. No `uv`, `just`, or source repo required.
 
 ```bash
-npx @syntropic137/setup       # Interactive setup (or `npx @syntropic137/setup init` for fresh)
-cd ~/.syntropic137
-./syn-ctl up                  # Start the stack
-./syn-ctl down                # Stop the stack
-./syn-ctl logs [service]      # View logs
-./syn-ctl update              # Pull latest images and restart
+npx @syntropic137/setup       # Interactive menu (setup, status, start, stop, logs, update)
+npx @syntropic137/setup init  # Fresh install — full interactive wizard
 ```
 
-The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. All stack management goes through `syn-ctl` or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
+The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. Stack management goes through `npx @syntropic137/setup` (interactive menu) or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
 
 ### Quick Dev Setup (Source Repo)
 
