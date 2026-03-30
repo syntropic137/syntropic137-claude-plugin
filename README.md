@@ -71,16 +71,9 @@ Run it again any time to manage your installation (status, logs, update).
 
 ## Managing Your Stack
 
-**Published path** (`~/.syntropic137/`):
-- `npx @syntropic137/setup status` — service health
-- `npx @syntropic137/setup logs` — tail logs
-- `npx @syntropic137/setup start` / `stop` — start/stop
-- `npx @syntropic137/setup update` — pull latest images
+Run `npx @syntropic137/setup` — the interactive menu shows all lifecycle commands (status, start, stop, logs, update).
 
-**Source repo** (contributors):
-- `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
-
-Or just ask Claude — it knows both paths.
+**Source repo** (contributors): `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
 
 ## How It Works
 
