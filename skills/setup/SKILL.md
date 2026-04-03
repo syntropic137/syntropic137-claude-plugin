@@ -18,6 +18,8 @@ npx @syntropic137/setup init   # Fresh install — full interactive wizard
 
 The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and then instructs the user to run `npx @syntropic137/setup` in their own terminal.
 
+> The `syn` CLI (`@syntropic137/cli`) is installed globally during setup. Self-hosters use `syn` directly for all platform operations. Source repo developers can also use `just cli <args>` as an equivalent.
+
 ## API URL — `SYN_API_URL`
 
 The platform can run locally or behind a public hostname (Cloudflare tunnel, VPS, etc.). All API calls should use `SYN_API_URL` as the base URL, resolved with this priority:
@@ -189,7 +191,20 @@ The wizard saves to a `syntropic137-config` item in the vault with fields:
 
 Zero-trust external access — webhooks from GitHub, remote dashboard access, API access.
 
-### Flow
+### Self-Host
+
+Run the interactive tunnel wizard:
+
+```bash
+npx @syntropic137/setup tunnel
+```
+
+This prompts for your Cloudflare tunnel token and public hostname, writes them to `.env`, and optionally restarts the stack. After setup:
+1. Verify: open `https://your-hostname`
+2. Update your GitHub App webhook URL to `https://your-hostname/api/v1/github/webhooks`
+3. Run `npx @syntropic137/setup github-app` to open GitHub App settings
+
+### Source Repo (Developers)
 
 1. Create Cloudflare account + add domain
 2. Go to Zero Trust dashboard → Network → Tunnels → Create

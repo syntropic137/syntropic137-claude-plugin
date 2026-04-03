@@ -74,3 +74,13 @@ curl -sf http://127.0.0.1:8137/health
 
 - If all containers are running and the health endpoint returns OK: tell the user setup is complete and suggest next steps (open the dashboard at http://localhost:8137, try `/syn-status`, create a workflow).
 - If containers are down or health fails: check logs with `docker compose -f "$HOME/.syntropic137/docker-compose.syntropic137.yaml" logs --tail=30` and help troubleshoot.
+
+---
+
+## Remote Access
+
+To enable GitHub webhooks and full event coverage (60+ event types vs 17 with polling):
+
+```bash
+npx @syntropic137/setup tunnel
+```

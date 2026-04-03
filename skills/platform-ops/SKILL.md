@@ -48,7 +48,7 @@ Syntropic137 orchestrates AI agent execution in isolated Docker workspaces and c
 | Install dashboard deps | `just dashboard-install` |
 | Check prerequisites | `just setup-check` |
 | Seed sample data | `just seed-all` |
-| Run CLI commands | `just cli <args>` or `uv run --package syn-cli syn <args>` |
+| Run CLI commands | `syn <args>` (Source repo alternative: `just cli <args>`) |
 
 ## Troubleshooting Recipes
 

@@ -1,10 +1,10 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[list | show <id>]"
+argument-hint: "[list | show <id> | search <query>]"
 ---
 
-# /syn-sessions — Session Management
+# /syn-workflows — Workflow Management
 
 First, resolve the API URL:
 
@@ -31,11 +31,15 @@ fi
 ```
 
 Parse the user's argument to determine the subcommand:
-- No argument or `list`:
-  - If SYN_CLI: `$SYN_CLI sessions list`
-  - Else: `curl -sf "$SYN_API_URL/api/v1/sessions"`
-- `show <id>`:
-  - If SYN_CLI: `$SYN_CLI sessions show <id>`
-  - Else: `curl -sf "$SYN_API_URL/api/v1/sessions/<id>"`
 
-Run the appropriate command and display the output (pipe through `jq .` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.
+- No argument or `list` →
+  - If SYN_CLI: `$SYN_CLI workflow list`
+  - Fallback: `curl -sf "$SYN_API_URL/api/v1/workflows"`
+- `show <id>` →
+  - If SYN_CLI: `$SYN_CLI workflow show <id>`
+  - Fallback: `curl -sf "$SYN_API_URL/api/v1/workflows/<id>"`
+- `search <query>` →
+  - If SYN_CLI: `$SYN_CLI workflow search "<query>"`
+  - Fallback: `curl -fsS --get --data-urlencode "q=<query>" "$SYN_API_URL/api/v1/workflows"`
+
+Display results and summarize for the user. If listing, highlight workflow name, type, classification, and phase count.
