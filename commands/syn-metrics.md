@@ -38,4 +38,4 @@ Parse the user's argument:
   - If SYN_CLI: `$SYN_CLI metrics show --workflow <id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/metrics?workflow_id=<id>"`
 
-Run the appropriate command and display the output (pipe through `python3 -m json.tool` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.
+Run the appropriate command and display the output (pipe through `jq .` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.

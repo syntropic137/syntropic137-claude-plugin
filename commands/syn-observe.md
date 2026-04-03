@@ -45,4 +45,4 @@ Parse the user's arguments:
 
 If no session ID is provided, tell the user they need to specify one and suggest running `/syn-sessions list` to find available sessions.
 
-Run the appropriate command and display the output (pipe through `python3 -m json.tool` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.
+Run the appropriate command and display the output (pipe through `jq .` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.

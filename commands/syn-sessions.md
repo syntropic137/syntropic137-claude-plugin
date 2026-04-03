@@ -38,4 +38,4 @@ Parse the user's argument to determine the subcommand:
   - If SYN_CLI: `$SYN_CLI sessions show <id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/sessions/<id>"`
 
-Run the appropriate command and display the output (pipe through `python3 -m json.tool` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.
+Run the appropriate command and display the output (pipe through `jq .` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.

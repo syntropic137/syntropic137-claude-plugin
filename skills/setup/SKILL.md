@@ -191,7 +191,20 @@ The wizard saves to a `syntropic137-config` item in the vault with fields:
 
 Zero-trust external access — webhooks from GitHub, remote dashboard access, API access.
 
-### Flow
+### Self-Host
+
+Run the interactive tunnel wizard:
+
+```bash
+npx @syntropic137/setup tunnel
+```
+
+This prompts for your Cloudflare tunnel token and public hostname, writes them to `.env`, and optionally restarts the stack. After setup:
+1. Verify: open `https://your-hostname`
+2. Update your GitHub App webhook URL to `https://your-hostname/api/v1/github/webhooks`
+3. Run `npx @syntropic137/setup github-app` to open GitHub App settings
+
+### Source Repo (Developers)
 
 1. Create Cloudflare account + add domain
 2. Go to Zero Trust dashboard → Network → Tunnels → Create
