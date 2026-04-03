@@ -20,13 +20,28 @@ fi
 SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 ```
 
+Detect whether the `syn` CLI is available:
+
+```bash
+if command -v syn &>/dev/null; then
+    SYN_CLI="syn"
+else
+    SYN_CLI=""
+fi
+```
+
 This command requires a session ID as the first argument.
 
 Parse the user's arguments:
-- `<session-id>` (only ID provided) → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
-- `<session-id> events` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
-- `<session-id> tools` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools"`
-- `<session-id> errors` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>?event_type=error"`
+- `<session-id>` (only ID provided) or `<session-id> events`:
+  - If SYN_CLI: `$SYN_CLI events session <session-id>`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
+- `<session-id> tools`:
+  - If SYN_CLI: `$SYN_CLI observe tools <session-id>`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools"`
+- `<session-id> errors`:
+  - If SYN_CLI: `$SYN_CLI events session <session-id> --type error`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>?event_type=error"`
 
 If no session ID is provided, tell the user they need to specify one and suggest running `/syn-sessions list` to find available sessions.
 

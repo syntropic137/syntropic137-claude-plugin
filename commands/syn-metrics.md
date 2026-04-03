@@ -20,8 +20,22 @@ fi
 SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 ```
 
+Detect whether the `syn` CLI is available:
+
+```bash
+if command -v syn &>/dev/null; then
+    SYN_CLI="syn"
+else
+    SYN_CLI=""
+fi
+```
+
 Parse the user's argument:
-- No argument → `curl -sf "$SYN_API_URL/api/v1/metrics"`
-- `--workflow <id>` → `curl -sf "$SYN_API_URL/api/v1/metrics?workflow_id=<id>"`
+- No argument:
+  - If SYN_CLI: `$SYN_CLI metrics show`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/metrics"`
+- `--workflow <id>`:
+  - If SYN_CLI: `$SYN_CLI metrics show --workflow <id>`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/metrics?workflow_id=<id>"`
 
 Run the appropriate command and display the output (pipe through `python3 -m json.tool` for readability if available). If the API is unreachable, suggest running `/syn-health` to diagnose.
