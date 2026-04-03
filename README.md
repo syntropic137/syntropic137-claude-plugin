@@ -43,8 +43,12 @@ That's it. Contributors to the source repo also need [uv](https://docs.astral.sh
 ## Updating
 
 ```bash
-claude plugin update syntropic137
+# Refresh marketplace catalog, then update plugin
+claude plugin marketplace update syntropic137
+claude plugin update syntropic137@syntropic137
 ```
+
+> **Why both steps?** `claude plugin update` pulls the latest version but does not refresh the local marketplace git clone. If the marketplace cache is stale, the update command may reinstall an old version. Running `marketplace update` first ensures the catalog has the latest release before the plugin update runs.
 
 ## Getting Started
 
