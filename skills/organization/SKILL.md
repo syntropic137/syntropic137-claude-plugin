@@ -193,8 +193,8 @@ curl -X POST http://localhost:8137/repos/<repo-id>/unassign
 
 The organization context has rich read models for operational intelligence:
 
-| Read Model | Purpose | CLI |
-|-----------|---------|-----|
+| Read Model | Purpose | Query |
+|-----------|---------|-------|
 | `GlobalOverview` | Cross-org overview with cost rollup | `syn insights overview` |
 | `SystemStatus` | Per-system health (healthy/degraded/failing) | `syn system status <id>` |
 | `SystemPatterns` | Execution patterns and trends | `GET /systems/{id}/patterns` |

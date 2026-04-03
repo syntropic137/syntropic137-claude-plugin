@@ -6,13 +6,25 @@ argument-hint: "[list | search <query> | install <plugin> | add <registry>]"
 
 # /syn-marketplace — Marketplace & Workflow Installation
 
-First, detect the CLI:
+First, resolve the API URL:
+
+```bash
+if [ -n "${SYN_API_URL:-}" ]; then
+    SYN_API_URL="$SYN_API_URL"
+elif [ -f "$HOME/.syntropic137/.env" ]; then
+    _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
+    if [ -n "$_hostname" ]; then
+        SYN_API_URL="https://$_hostname"
+    fi
+fi
+SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
+```
+
+Detect whether the `syn` CLI is available:
 
 ```bash
 if command -v syn &>/dev/null; then
     SYN_CLI="syn"
-elif command -v uv &>/dev/null; then
-    SYN_CLI="uv run --package syn-cli syn"
 else
     SYN_CLI=""
 fi

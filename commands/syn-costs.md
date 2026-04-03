@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[summary | session <id> | workflow <id>]"
+argument-hint: "[summary | session <id> | execution <id>]"
 ---
 
 # /syn-costs — Cost Tracking
@@ -37,7 +37,7 @@ Parse the user's argument to determine the subcommand:
 - `session <id>`:
   - If SYN_CLI: `$SYN_CLI costs session <id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/costs/sessions/<id>"`
-- `workflow <id>`:
+- `execution <id>`:
   - If SYN_CLI: `$SYN_CLI costs execution <id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/costs/executions/<id>"`
 
