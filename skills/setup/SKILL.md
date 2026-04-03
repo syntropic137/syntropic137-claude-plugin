@@ -18,6 +18,8 @@ npx @syntropic137/setup init   # Fresh install — full interactive wizard
 
 The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and then instructs the user to run `npx @syntropic137/setup` in their own terminal.
 
+> The `syn` CLI (`@syntropic137/cli`) is installed globally during setup. Self-hosters use `syn` directly for all platform operations. Source repo developers can also use `just cli <args>` as an equivalent.
+
 ## API URL — `SYN_API_URL`
 
 The platform can run locally or behind a public hostname (Cloudflare tunnel, VPS, etc.). All API calls should use `SYN_API_URL` as the base URL, resolved with this priority:

@@ -13,18 +13,18 @@ Use this knowledge when the user wants to run workflows, monitor execution progr
 
 ```bash
 # Run a workflow with inputs
-uv run --package syn-cli syn workflow run <workflow-id> \
+syn workflow run <workflow-id> \
   --input issue_url=https://github.com/org/repo/issues/42 \
   --input priority=high
 
 # Short alias
-uv run --package syn-cli syn run <workflow-id> --input issue_url=...
+syn run <workflow-id> --input issue_url=...
 
 # With provider override
-uv run --package syn-cli syn workflow run <workflow-id> --provider claude
+syn workflow run <workflow-id> --provider claude
 
 # Check execution status
-uv run --package syn-cli syn workflow status <execution-id>
+syn workflow status <execution-id>
 ```
 
 ### Via API
@@ -54,7 +54,7 @@ curl -X POST http://localhost:8137/workflows/<workflow-id>/execute \
 
 ```bash
 # All executions
-uv run --package syn-cli syn sessions list
+syn sessions list
 
 # Filter by status
 curl -s "http://localhost:8137/executions?status=running" | python -m json.tool
@@ -125,14 +125,14 @@ Control a running execution via HTTP or WebSocket.
 
 ```bash
 # Pause (graceful — waits for current tool to finish)
-uv run --package syn-cli syn control pause <execution-id> --reason "Reviewing intermediate results"
+syn control pause <execution-id> --reason "Reviewing intermediate results"
 
 # Via API
 curl -X POST http://localhost:8137/executions/<execution-id>/pause \
   -d '{"reason": "Reviewing intermediate results"}'
 
 # Resume
-uv run --package syn-cli syn control resume <execution-id>
+syn control resume <execution-id>
 
 # Via API
 curl -X POST http://localhost:8137/executions/<execution-id>/resume
@@ -142,7 +142,7 @@ curl -X POST http://localhost:8137/executions/<execution-id>/resume
 
 ```bash
 # Cancel (stops execution, marks as cancelled)
-uv run --package syn-cli syn control cancel <execution-id> --reason "Wrong workflow template"
+syn control cancel <execution-id> --reason "Wrong workflow template"
 
 # Via API
 curl -X POST http://localhost:8137/executions/<execution-id>/cancel \
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8137/executions/<execution-id>/cancel \
 
 ```bash
 # Interrupt (preserves partial state, like Ctrl+C)
-uv run --package syn-cli syn control interrupt <execution-id>
+syn control interrupt <execution-id>
 ```
 
 ### Inject Context
@@ -252,9 +252,9 @@ Look at:
 ### 2. Check the agent session
 
 ```bash
-uv run --package syn-cli syn sessions show <session-id>
-uv run --package syn-cli syn observe tools <session-id>
-uv run --package syn-cli syn observe errors <session-id>
+syn sessions show <session-id>
+syn observe tools <session-id>
+syn observe errors <session-id>
 ```
 
 ### 3. Check workspace logs
