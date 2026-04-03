@@ -2,7 +2,7 @@
 name: execution-monitor
 description: Monitor a running Syntropic137 workflow execution — polls for phase progress, reports status changes, alerts on errors, and tracks cost accumulation
 model: haiku
-disallowedTools: Write, Edit
+disallowed-tools: Write, Edit
 ---
 
 # Execution Monitor

@@ -2,7 +2,7 @@
 name: security-reviewer
 description: Review a marketplace workflow plugin or GitHub repository for security issues before installing — checks phase prompts for injection, validates schemas, audits tool access declarations
 model: sonnet
-disallowedTools: Write, Edit
+allowed-tools: Bash, Read, Glob, Grep
 ---
 
 # Security Reviewer
@@ -58,7 +58,9 @@ If `triggers.json` exists, check:
 cat "$tmp/plugin/syntropic137-plugin.json" 2>/dev/null
 
 # Validate workflow YAML structure
-syn workflow validate "$tmp/plugin/workflows/*/workflow.yaml" 2>/dev/null || echo "Schema validation not available — review manually"
+find "$tmp/plugin/workflows" -name 'workflow.yaml' -print0 2>/dev/null | while IFS= read -r -d '' workflow; do
+  syn workflow validate "$workflow" 2>/dev/null || echo "Schema validation not available — review manually"
+done
 ```
 
 ## Report Format

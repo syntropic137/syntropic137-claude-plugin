@@ -42,4 +42,4 @@ Parse the user's argument. The first argument is the workflow ID. Remaining argu
 
 After launching, display the execution ID and suggest monitoring with `/syn-executions show <id>`.
 
-If the user provides just a workflow name without inputs, first check what inputs are required using `/syn-workflows show <id>` and prompt the user for any required inputs before executing.
+If the user provides a workflow name (not a UUID), first resolve it to an ID using `/syn-workflows search <name>` or `/syn-workflows list`, then use the resolved ID. Once you have the ID, check what inputs are required using `/syn-workflows show <id>` and prompt the user for any required inputs before executing.
