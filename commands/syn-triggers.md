@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[list | create --from-package <name> | pause <id> | resume <id>]"
+argument-hint: "[list | create --from-package <name> | pause <id> | resume <id> | history <id>]"
 ---
 
 # /syn-triggers — Trigger Management
@@ -44,5 +44,17 @@ Parse the user's argument:
 - `resume <id>` →
   - If SYN_CLI: `$SYN_CLI triggers resume <id>`
   - Fallback: `curl -fsS -X POST "$SYN_API_URL/api/v1/triggers/<id>/resume"`
+- `history <id>` →
+  - If SYN_CLI: `$SYN_CLI triggers history <id>`
+  - Fallback: `curl -sf "$SYN_API_URL/api/v1/triggers/<id>/history"`
+  - Show both fired and blocked entries. Blocked entries have `status: "blocked"`, `guard_name` (e.g. "concurrency", "max_attempts", "cooldown"), and `block_reason`.
 
 Display trigger details including: name, event type, conditions, associated workflow, and status (active/paused). Highlight any safety configuration (max_attempts, cooldown, budget).
+
+When showing history, highlight blocked entries and explain the guard that blocked them:
+- **concurrency** — execution already running for the same trigger + PR
+- **max_attempts** — max fires reached for that PR
+- **cooldown** — too soon since last fire
+- **daily_limit** — daily fire cap reached
+- **idempotency** — duplicate event
+- **conditions_not_met** — webhook payload didn't match trigger conditions
