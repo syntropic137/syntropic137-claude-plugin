@@ -160,6 +160,8 @@ The `repository` input is special — workflows with `{{repository}}` in their `
 | `debounce_seconds` | 0 | Batch rapid events into one fire |
 | `cooldown_seconds` | 300 | Min time between fires for same PR |
 
+**Concurrency guard** — In addition to the configurable limits above, a built-in concurrency guard prevents catch-up storms after restart. If an execution is already RUNNING for the same `(trigger_id, pr_number)`, new events for that pair are blocked instead of firing duplicates.
+
 These prevent runaway costs from chatty webhooks or infinite loops.
 
 ### Managing Triggers
@@ -234,7 +236,7 @@ Conditions use field/operator/value matching against the webhook payload:
 
 - **Aggregate**: `TriggerRuleAggregate`
 - **Status**: `ACTIVE` | `PAUSED` | `DELETED`
-- **Events**: `TriggerRegisteredEvent`, `TriggerFiredEvent`, `TriggerPausedEvent`, `TriggerResumedEvent`, `TriggerDeletedEvent`
+- **Events**: `TriggerRegisteredEvent`, `TriggerFiredEvent`, `TriggerBlockedEvent`, `TriggerPausedEvent`, `TriggerResumedEvent`, `TriggerDeletedEvent`
 - **Key state**: `name`, `event`, `conditions`, `repository`, `workflow_id`, `input_mapping`, `config`, `fire_count`
 
 ### Seeding Triggers
@@ -279,14 +281,20 @@ just seed-all         # Seed everything
 
 ### "Why didn't my trigger fire?"
 
-1. Check trigger status — might be `PAUSED` or `DELETED`: `syn triggers show <trigger-id>`
-2. Check fire history: `syn triggers history <trigger-id>`
-3. Check `fire_count` vs `max_attempts` — might be exhausted for that PR
-4. Check `daily_limit` — might have hit the daily cap
-5. Check conditions — might not match the webhook payload
-6. Check `cooldown_seconds` — too recent since last fire
-7. Check installation — GitHub App might be revoked
-8. Check webhook delivery — selfhost: check Cloudflare tunnel status; dev: `just dev-webhooks-logs` (source repo only) for Smee issues
+1. **Check trigger history first** — blocked entries now show the exact guard and reason:
+   ```bash
+   syn triggers history <trigger-id>
+   ```
+   Blocked entries display `status: blocked` with `guard_name` and `block_reason`:
+   - `concurrency` — execution already running for same trigger + PR
+   - `max_attempts` — max fires reached for that PR
+   - `cooldown` — too soon since last fire
+   - `daily_limit` — daily fire cap reached
+   - `idempotency` — duplicate event already processed
+   - `conditions_not_met` — webhook payload didn't match conditions
+2. Check trigger status — might be `PAUSED` or `DELETED`: `syn triggers show <trigger-id>`
+3. Check installation — GitHub App might be revoked
+4. Check webhook delivery — selfhost: check Cloudflare tunnel status; dev: `just dev-webhooks-logs` (source repo only) for Smee issues
 
 ### "How do I test triggers locally?"
 
