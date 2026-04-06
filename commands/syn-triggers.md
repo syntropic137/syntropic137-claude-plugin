@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[list | create --from-package <name> | pause <id> | resume <id>]"
+argument-hint: "[list | create --from-package <name> | pause <id> | resume <id> | history <id>]"
 ---
 
 # /syn-triggers — Trigger Management
