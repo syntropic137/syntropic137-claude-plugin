@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "<session-id> [events | tools | errors]"
+argument-hint: "<session-id> [events | tools | tokens | errors] [--limit N]"
 ---
 
 # /syn-observe — Observability Data
@@ -25,7 +25,8 @@ This command requires a session ID as the first argument.
 Parse the user's arguments:
 - `<session-id>` (only ID provided) → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
 - `<session-id> events` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
-- `<session-id> tools` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools"`
+- `<session-id> tools [--limit N]` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools?limit=<N>"` (default limit: 100)
+- `<session-id> tokens` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tokens"`
 - `<session-id> errors` → `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>?event_type=error"`
 
 If no session ID is provided, tell the user they need to specify one and suggest running `/syn-sessions list` to find available sessions.

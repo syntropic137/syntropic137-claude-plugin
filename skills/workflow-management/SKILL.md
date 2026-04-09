@@ -1,6 +1,7 @@
 ---
 name: workflow-management
 description: Create, configure, and manage Syntropic137 workflow templates — phase definitions, agent config, YAML schema, $ARGUMENTS substitution, input declarations, and design patterns like RIPER-5
+user-invocable: false
 ---
 
 # Workflow Management — Syntropic137
@@ -384,3 +385,33 @@ CreateWorkflowTemplateCommand
 
 - **WorkflowDetailProjection** (`workflow_details`): Template definitions + `runs_count`
 - Updated by: `WorkflowTemplateCreatedEvent`, `WorkflowExecutionStartedEvent` (increments runs_count)
+
+## CLI Quick Reference
+
+```bash
+# List workflows
+syn workflow list
+syn workflow list --include-archived
+
+# Inspect
+syn workflow show <id>
+
+# Create
+syn workflow create --type <type> --repo owner/repo --description "Feature X"
+# Types: research, planning, implementation, review, deployment, custom
+
+# Run
+syn workflow run <id> --task "Implement retry logic"
+syn workflow run <id> --task "Fix auth bug" --input repository=owner/repo
+
+# Lifecycle
+syn workflow status <execution-id>
+syn workflow validate path/to/workflow.yaml
+syn workflow delete <id>
+syn workflow delete <id> --force      # skip confirmation
+
+# Short alias
+syn run <id> -t "task description"
+```
+
+Use `/syn-workflow` to run these commands interactively from Claude Code.
