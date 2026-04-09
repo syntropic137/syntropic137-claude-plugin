@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "<session-id> [events | tools | errors]"
+argument-hint: "<session-id> [events | tools | tokens | errors] [--limit N]"
 ---
 
 # /syn-observe — Observability Data
@@ -36,9 +36,11 @@ Parse the user's arguments:
 - `<session-id>` (only ID provided) or `<session-id> events`:
   - If SYN_CLI: `$SYN_CLI events session <session-id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>"`
-- `<session-id> tools`:
+- `<session-id> tools [--limit N]` (default limit: 100):
   - If SYN_CLI: `$SYN_CLI observe tools <session-id>`
-  - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools"`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tools?limit=<N>"`
+- `<session-id> tokens`:
+  - `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>/tokens"`
 - `<session-id> errors`:
   - If SYN_CLI: `$SYN_CLI events session <session-id> --type error`
   - Else: `curl -sf "$SYN_API_URL/api/v1/events/sessions/<session-id>?event_type=error"`

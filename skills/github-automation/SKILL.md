@@ -1,6 +1,7 @@
 ---
 name: github-automation
 description: Set up GitHub App integration, create webhook trigger rules with safety limits, and automate Syntropic137 workflow execution from GitHub events
+user-invocable: false
 ---
 
 # GitHub Automation — Syntropic137
@@ -308,3 +309,33 @@ just seed-all         # Seed everything
 4. Open a PR on the target repo — watch the execution start
 5. **Source repo only:** Record webhooks for replay: `just dev-record-webhooks`
 6. **Source repo only:** Replay later: `just replay-webhooks`
+
+## CLI Quick Reference
+
+```bash
+# List triggers
+syn triggers list
+syn triggers list --repository owner/repo
+
+# Register a trigger
+syn triggers register \
+  --name "pr-review" \
+  --event pull_request \
+  --repository owner/repo \
+  --workflow <workflow-id>
+
+# Enable / pause
+syn triggers enable <name> --repository owner/repo
+syn triggers pause <id> --reason "maintenance"
+
+# List GitHub App repos
+syn github repos
+syn github repos --installation <id>
+
+# GitHub App setup
+npx @syntropic137/setup github-app
+```
+
+Supported events: `push`, `pull_request`, `issues`, `issue_comment`, `check_run`, `workflow_run`
+
+Use `/syn-triggers` to run these commands interactively from Claude Code.

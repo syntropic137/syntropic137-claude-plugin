@@ -1,6 +1,7 @@
 ---
 name: execution-control
 description: Run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), and troubleshoot failed Syntropic137 executions
+user-invocable: false
 ---
 
 # Execution Control — Syntropic137
@@ -291,3 +292,22 @@ After completion, each execution has aggregated metrics:
 ```
 
 Use `/syn-costs` or `/syn-metrics` to view aggregated cost and performance data across executions.
+
+## CLI Quick Reference
+
+```bash
+# Control plane
+syn control status <execution-id>
+syn control pause <execution-id> --reason "investigating"
+syn control resume <execution-id>
+syn control cancel <execution-id> --reason "wrong workflow"
+
+# List executions (via API)
+curl -sf http://localhost:8137/api/v1/executions | python3 -m json.tool
+curl -sf "http://localhost:8137/api/v1/executions?status=running" | python3 -m json.tool
+
+# Execution detail
+curl -sf http://localhost:8137/api/v1/executions/<execution-id> | python3 -m json.tool
+```
+
+Use `/syn-control` to run these commands interactively from Claude Code.

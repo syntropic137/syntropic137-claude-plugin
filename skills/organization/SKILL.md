@@ -1,6 +1,7 @@
 ---
 name: organization
 description: Manage the Syntropic137 Organization→System→Repo hierarchy for cost rollup, health monitoring, and contribution tracking
+user-invocable: false
 ---
 
 # Organization Management — Syntropic137
@@ -225,3 +226,26 @@ just seed-all             # Seed everything (workflows + triggers + org)
 1. Ensure repos are registered and assigned to systems
 2. Check system status: `syn system status <system-id>` — shows healthy/degraded/failing per repo
 3. Global overview: `syn insights overview` — cross-org summary
+
+## CLI Quick Reference
+
+```bash
+# Organizations
+syn org list
+syn insights overview
+
+# Systems
+syn system list
+syn system status <system-id>
+syn system cost <system-id>
+
+# Repos
+syn github repos
+syn repo list
+
+# Fallback (API)
+curl -sf http://localhost:8137/api/v1/organizations/overview | python3 -m json.tool
+curl -sf http://localhost:8137/api/v1/systems/<system-id>/status | python3 -m json.tool
+```
+
+Use `/syn-repo` to query these from Claude Code.

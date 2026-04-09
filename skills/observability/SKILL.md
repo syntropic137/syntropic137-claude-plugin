@@ -1,6 +1,7 @@
 ---
 name: observability
 description: Query Syntropic137 agent sessions, tool timelines, token metrics, cost breakdowns, and interpret observability data — why was a session expensive, why did it fail
+user-invocable: false
 ---
 
 # Observability — Syntropic137
@@ -307,3 +308,33 @@ The Syn-Dashboard-UI at `http://localhost:5173` (dev) shows:
 - Execution cost summaries
 - Tool cost breakdowns
 - Contribution heatmaps
+
+## CLI Quick Reference
+
+```bash
+# Sessions
+syn sessions list
+syn sessions list --workflow <workflow-id>
+syn sessions list --status running
+syn sessions show <session-id>
+
+# Artifacts
+syn artifacts list
+syn artifacts list --workflow <workflow-id>
+syn artifacts show <artifact-id>
+syn artifacts content <artifact-id> --raw
+
+# Observability (via API)
+curl -sf "http://localhost:8137/api/v1/events/sessions/<session-id>/tools?limit=100" | python3 -m json.tool
+curl -sf http://localhost:8137/api/v1/events/sessions/<session-id>/tokens | python3 -m json.tool
+curl -sf http://localhost:8137/api/v1/costs/summary | python3 -m json.tool
+curl -sf http://localhost:8137/api/v1/costs/sessions/<session-id> | python3 -m json.tool
+
+# Metrics
+curl -sf http://localhost:8137/api/v1/metrics | python3 -m json.tool
+curl -sf "http://localhost:8137/api/v1/metrics?workflow_id=<workflow-id>" | python3 -m json.tool
+```
+
+Use `/syn-insights` for interactive observability from Claude Code.
+Use `/syn-observe <session-id> [tools|tokens|errors]` for quick session inspection.
+Use `/syn-costs [summary|session <id>|workflow <id>]` for cost breakdowns.

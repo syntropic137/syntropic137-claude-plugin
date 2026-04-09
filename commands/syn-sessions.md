@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[list | show <id>]"
+argument-hint: "[list [--workflow <id>] [--status <status>] | show <id>]"
 ---
 
 # /syn-sessions — Session Management
@@ -34,6 +34,12 @@ Parse the user's argument to determine the subcommand:
 - No argument or `list`:
   - If SYN_CLI: `$SYN_CLI sessions list`
   - Else: `curl -sf "$SYN_API_URL/api/v1/sessions"`
+- `list --workflow <id>`:
+  - If SYN_CLI: `$SYN_CLI sessions list --workflow <id>`
+  - Else: `curl -sf "$SYN_API_URL/api/v1/sessions?workflow_id=<id>"`
+- `list --status <status>` (values: `running`, `completed`, `failed`, `cancelled`):
+  - `curl -sf "$SYN_API_URL/api/v1/sessions?status=<status>"`
+- `list --workflow <id> --status <status>` — combine both query params
 - `show <id>`:
   - If SYN_CLI: `$SYN_CLI sessions show <id>`
   - Else: `curl -sf "$SYN_API_URL/api/v1/sessions/<id>"`
