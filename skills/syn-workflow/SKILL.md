@@ -7,24 +7,21 @@ model: sonnet
 
 # /syn-workflow — Workflow Management
 
-Use this skill to manage Syntropic137 workflow templates and executions from inside Claude Code. All operations go through the `syn` CLI. If `syn` is not installed, run `npx @syntropic137/setup cli` first.
+Use this skill when you need to interact with workflow templates and executions from the command line. All operations use the `syn` CLI. Install it with `npx @syntropic137/setup cli` if not present.
 
-## packages vs list
+## When to Use This
 
-These are two distinct things:
+Use `/syn-workflow` when you want to: browse what workflows exist (`list`, `packages`), inspect a workflow's phases (`show`), kick off a run (`run`), or validate a YAML definition before registering it (`validate`).
 
-- **`packages`** — locally cached workflow YAML definitions on disk (`~/.syntropic137/workflows/` or `./workflows/` in dev). These are downloaded but may not yet be registered in the running platform.
-- **`list`** — workflows currently registered in the running Syntropic137 instance (what the platform knows about and can execute).
+For **designing** a new workflow template from scratch, the workflow-management skill has the full conceptual model and YAML schema. For **monitoring a running execution**, use `/syn-control`.
 
-## Workflow Packages
+## packages vs list — Two Different Things
 
-List locally cached workflow packages and their required inputs:
+**`packages`** — locally cached workflow YAMLs on disk (`~/.syntropic137/workflows/` or `./workflows/`). These are downloaded definitions that may not yet be registered in the running platform. Shows the `input_declarations` (Required/Optional inputs) for each:
 
-```bash
+```
 syn workflow packages
 ```
-
-Output shows each package name with its `input_declarations` — the Required and Optional inputs you'll need to supply when running it:
 
 ```
 Local workflow packages (~/.syntropic137/workflows/):
@@ -37,33 +34,44 @@ Local workflow packages (~/.syntropic137/workflows/):
     Required: workflow_id, repository
 ```
 
-This was renamed from `installed` in earlier versions of the CLI.
+**`list`** — workflows currently registered in the running Syntropic137 instance. These are what the platform can actually execute:
 
-If `syn` is not available, inspect a package's inputs directly:
-```bash
-python3 -c "import yaml, sys; d=yaml.safe_load(open(sys.argv[1])); [print(i) for i in d.get('input_declarations',[])]" ~/.syntropic137/workflows/my-workflow.yaml
 ```
-
-## List Platform-Registered Workflows
-
-```bash
 syn workflow list
-syn workflow list --include-archived   # include archived templates
 ```
 
-## Show, Run, Create, Validate
+**The common pattern:** browse `packages` to see what inputs a workflow needs before running it, then use `list` to confirm it's registered, then `run` it.
+
+## Core Commands
 
 ```bash
-syn workflow show <id>
-syn workflow run <id> --task "refactor auth module"
-syn workflow run <id> --task "fix bug" --input repository=owner/repo
-syn workflow create --type implementation --repo owner/repo --description "Feature X"
-syn workflow validate path/to/workflow.yaml
+syn workflow packages                          # locally cached workflow definitions
+syn workflow list                              # platform-registered workflows
+syn workflow list --include-archived           # include archived templates
+syn workflow show <id>                         # phase definitions, config, input declarations
+syn workflow run <id> --task "Fix auth bug"
+syn workflow run <id> --task "Review PR" --input repository=owner/repo
+syn workflow validate path/to/workflow.yaml    # validate before registering
 syn workflow delete <id>
-syn workflow delete <id> --force
-syn workflow status <execution-id>
+syn workflow delete <id> --force               # skip confirmation
+syn workflow status <execution-id>             # check a running execution
 ```
 
-Run `syn workflow --help` for full flag reference, or check `docs.syntropic137.com/docs/cli` for the complete CLI docs.
+Short alias: `syn run <id> -t "task description"`
 
-On errors, run `/syn-health` to check platform status.
+## Common Scenarios
+
+**"I want to run a workflow but don't know its inputs."**
+1. `syn workflow packages` — shows required and optional inputs per workflow
+2. `syn workflow run <id> --task "..." --input key=value` for each required input
+
+**"I want to check if a workflow is already registered."**
+`syn workflow list` — if it's not there, install it from the marketplace or validate + register your YAML.
+
+**"I wrote a new workflow YAML and want to use it."**
+1. `syn workflow validate ./my-workflow.yaml` — catch errors before registering
+2. `syn workflow create --type implementation --repo owner/repo --description "..."` — or `just seed-workflows` in the source repo
+
+## Errors
+
+On errors, run `/syn-health` to check platform status. For deep workflow design questions, see the workflow-management skill. Run `syn workflow --help` for full flag reference.

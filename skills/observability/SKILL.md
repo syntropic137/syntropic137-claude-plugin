@@ -1,340 +1,112 @@
 ---
 name: observability
 description: Query Syntropic137 agent sessions, tool timelines, token metrics, cost breakdowns, and interpret observability data — why was a session expensive, why did it fail
-user-invocable: false
 ---
 
 # Observability — Syntropic137
 
-Use this knowledge when the user asks about sessions, costs, metrics, tool usage, token consumption, or wants to understand what an agent did during execution.
+When an agent run costs more than expected, takes too long, or fails without an obvious cause, observability data is where you find the answer. **The telemetry lane and the domain lane are separate — querying one does not give you information from the other.** Knowing which to look at first saves significant time.
+
+## When to Use This Skill
+
+Use this when you are: investigating why a session was expensive, diagnosing an agent failure, auditing tool usage patterns, building cost visibility across workflows, or understanding what an agent actually did step by step.
+
+Not needed for controlling a running execution — use execution-control for that. Not needed for listing sessions at a glance — use `/syn-insights` for quick access.
 
 ## Two-Lane Architecture
 
-Syntropic137 separates concerns into two lanes:
-
-- **Lane 1 (Domain State)**: Event-sourced aggregates — `AgentSession` tracks session lifecycle, operations, and status
-- **Lane 2 (Telemetry)**: Append-only observations — token usage, tool traces, timing. Never replayed for state decisions.
-
-This means there are two paths to query:
-- **Session data** (Lane 1): `GET /sessions/{id}` — authoritative status, operations, final metrics
-- **Telemetry data** (Lane 2): `GET /observability/sessions/{id}/tools`, `/tokens` — real-time traces
-
-## Sessions
-
-### What is a Session?
-
-An `AgentSession` represents one agent execution — one Claude CLI invocation inside a workspace. A workflow execution with 3 phases creates 3 sessions (one per phase).
-
-### Session Lifecycle
-
 ```
-StartSessionCommand → SessionStartedEvent → RUNNING
-  ↓
-RecordOperationCommand → OperationRecordedEvent (repeated)
-  ↓
-CompleteSessionCommand → SessionCompletedEvent → COMPLETED | FAILED | CANCELLED
+Lane 1 — Domain State (Event Sourcing)     Lane 2 — Telemetry (Append-Only)
+─────────────────────────────────────      ──────────────────────────────────
+AgentSession aggregate                     Token counts per message
+  → authoritative session status           Tool traces with timestamps
+  → operations log                         Timing and duration data
+  → final cost totals                      Cache hit/miss breakdown
+
+Query: GET /sessions/{id}                  Query: GET /observability/sessions/{id}/tools
+       syn sessions show <id>                     syn observe tools <id>
+                                                  syn observe tokens <id>
 ```
 
-### Querying Sessions
+**Lane 1 is authoritative for status and totals.** Lane 2 is authoritative for real-time traces and granular per-message data. They agree on aggregate numbers but serve different questions.
 
-```bash
-# List all sessions
-syn sessions list
+## Sessions — What They Are
 
-# Filter by workflow
-syn sessions list --workflow <workflow-id>
+One `AgentSession` = one Claude CLI invocation in one workspace. A 3-phase workflow creates 3 sessions. Sessions are linked to their execution via `execution_id` and to their workflow via `workflow_id`.
 
-# Filter by status
-syn sessions list --status running
+List sessions: `syn sessions list` — optionally filter with `--workflow <id>` or `--status running`.
 
-# Session detail
-syn sessions show <session-id>
-```
+Show a session: `syn sessions show <session-id>` — shows operations log, total tokens, cost, and duration.
 
-### API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/sessions` | List sessions (filter: `workflow_id`, `status`, paginated) |
-| `GET` | `/sessions/{id}` | Full session detail with operations |
-
-### Session Response Shape
-
-```json
-{
-  "id": "sess-abc123",
-  "workflow_id": "wf-xyz",
-  "execution_id": "exec-456",
-  "phase_id": "analyze",
-  "status": "completed",
-  "agent_provider": "claude",
-  "agent_model": "sonnet",
-  "total_tokens": 2300,
-  "input_tokens": 1500,
-  "output_tokens": 800,
-  "total_cost_usd": "0.039",
-  "started_at": "2026-03-18T10:00:00Z",
-  "completed_at": "2026-03-18T10:00:45Z",
-  "duration_seconds": 45.2,
-  "operations": [
-    {
-      "operation_id": "op-1",
-      "operation_type": "MESSAGE_REQUEST",
-      "timestamp": "2026-03-18T10:00:01Z",
-      "message_role": "user",
-      "message_content": "Analyze the bug..."
-    },
-    {
-      "operation_id": "op-2",
-      "operation_type": "TOOL_EXECUTION_STARTED",
-      "timestamp": "2026-03-18T10:00:05Z",
-      "tool_name": "Read",
-      "tool_use_id": "tu-1"
-    },
-    {
-      "operation_id": "op-3",
-      "operation_type": "TOOL_EXECUTION_COMPLETED",
-      "timestamp": "2026-03-18T10:00:06Z",
-      "tool_name": "Read",
-      "tool_use_id": "tu-1",
-      "duration_seconds": 1.2,
-      "success": true
-    }
-  ]
-}
-```
-
-### Operation Types
-
-| Type | Description |
-|------|-------------|
-| `MESSAGE_REQUEST` | Prompt sent to the agent |
-| `MESSAGE_RESPONSE` | Agent response |
-| `TOOL_EXECUTION_STARTED` | Agent invoked a tool |
-| `TOOL_EXECUTION_COMPLETED` | Tool finished |
-| `TOOL_BLOCKED` | Tool was safety-blocked |
-| `THINKING` | Agent thinking/reasoning step |
-| `ERROR` | Error occurred |
-| `VALIDATION` | Input/output validation |
+Via API: `GET /api/v1/sessions`, `GET /api/v1/sessions?workflow_id=<id>&status=running`.
 
 ## Tool Timeline
 
-Detailed tool execution traces — when each tool was called, how long it took, whether it succeeded.
+The tool timeline answers: **what did the agent do, in what order, and how long did each step take?**
 
 ```bash
-# View tool timeline for a session
 syn observe tools <session-id>
-
-# Via API
-curl -s "http://localhost:8137/observability/sessions/<session-id>/tools?limit=100" | python -m json.tool
 ```
 
-Response shape:
-```json
-{
-  "session_id": "sess-abc123",
-  "total_executions": 15,
-  "executions": [
-    {
-      "tool_name": "Read",
-      "tool_use_id": "tu-1",
-      "status": "completed",
-      "started_at": "2026-03-18T10:00:05Z",
-      "completed_at": "2026-03-18T10:00:06Z",
-      "duration_ms": 1200,
-      "success": true,
-      "tool_input": {"file_path": "/src/auth/middleware.py"},
-      "tool_output": "..."
-    }
-  ]
-}
-```
+Each entry shows: tool name, duration_ms, success/failure, and the tool's input and output. `TOOL_BLOCKED` entries indicate tools the agent attempted but wasn't allowed to use — these are always worth investigating in failed sessions.
 
-**Correlation**: `tool_use_id` links STARTED and COMPLETED events for the same tool invocation.
+`tool_use_id` links STARTED and COMPLETED events for the same invocation — useful when a tool's output looks truncated (the STARTED event has the input, COMPLETED has the output).
 
 ## Token Metrics
 
-Per-message token usage with cache statistics.
+The token breakdown answers: **where did the cost come from, and are we getting cache benefits?**
 
 ```bash
-# View token metrics for a session
 syn observe tokens <session-id>
-
-# Via API
-curl -s "http://localhost:8137/observability/sessions/<session-id>/tokens" | python -m json.tool
 ```
 
-Response shape:
-```json
-{
-  "session_id": "sess-abc123",
-  "total_input_tokens": 1500,
-  "total_output_tokens": 800,
-  "total_tokens": 2300,
-  "total_cost_usd": "0.039",
-  "cache_creation_tokens": 500,
-  "cache_read_tokens": 200
-}
-```
-
-**Cache tokens**: When Claude caches context, `cache_creation_tokens` shows the initial cost and `cache_read_tokens` shows savings from cache hits.
+Key fields: `total_input_tokens`, `total_output_tokens`, `cache_creation_tokens`, `cache_read_tokens`. High `cache_read_tokens` relative to `cache_creation_tokens` means the session is efficiently reusing context. Low cache hits with high input tokens means the agent is re-reading large files repeatedly — a signal to restructure prompts or reduce context loading.
 
 ## Costs
 
-### Cost Model
+Summary across all sessions: `syn costs summary`
 
-Default pricing (configurable):
-- Input tokens: $0.01 per 1,000
-- Output tokens: $0.03 per 1,000
+Per session: `syn costs session <session-id>`
 
-### Querying Costs
+Per workflow execution (all phases aggregated): `syn costs workflow <workflow-id>`
 
-```bash
-# Overall cost summary
-syn costs summary
+The `SessionCost` projection breaks down cost by model and by tool — `cost_by_tool` shows which tools consumed the most tokens. `Bash` is typically the most expensive (long outputs), `Read` is the most-called.
 
-# Cost for a specific session
-syn costs session <session-id>
+Default pricing: input $0.01/1K tokens, output $0.03/1K tokens (configurable).
 
-# Cost for a workflow's executions
-syn costs workflow <workflow-id>
-```
+## Answering the Common Questions
 
-### Cost Breakdowns Available
+**"Why was this session expensive?"**
+1. Check `cost_by_model` — was an expensive model (opus) used where sonnet would do?
+2. Check `tokens_by_tool` — is `Bash` or `Read` dominating? Large command outputs or full file reads accumulate fast.
+3. Check `cache_read_tokens` — low cache hits mean repeated context loading across turns.
 
-The `SessionCost` projection tracks granular cost breakdowns:
+**"Why did this session fail?"**
+1. Check `syn sessions show <id>` — look at the operations log for the last entries before the error.
+2. Check the tool timeline — look for `TOOL_BLOCKED` events or tools with `success: false`.
+3. Check the execution's phase detail — the phase `error_message` often points directly to the cause.
 
-| Breakdown | Description |
-|-----------|-------------|
-| `cost_by_model` | Cost per model (sonnet, opus, haiku) |
-| `cost_by_tool` | Cost attributed to each tool |
-| `tokens_by_tool` | Token usage per tool |
-| `cost_by_tool_tokens` | Token cost per tool |
-
-### Via API
-
-```bash
-# Session cost
-curl -s "http://localhost:8137/costs/sessions/<session-id>" | python -m json.tool
-
-# Execution cost (aggregated across all phases)
-curl -s "http://localhost:8137/costs/executions/<execution-id>" | python -m json.tool
-```
-
-## Metrics
-
-Aggregated metrics across sessions and executions.
-
-```bash
-# Overall metrics
-syn metrics show
-
-# Metrics for a specific workflow
-syn metrics show --workflow <workflow-id>
-```
-
-### API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/metrics` | Aggregated platform metrics |
-| `GET` | `/metrics?workflow_id=...` | Workflow-specific metrics |
+**"What tools did the agent use most?"**
+Check `tokens_by_tool` in the cost breakdown. Cross-reference with the tool timeline to see if any high-frequency tools produced redundant outputs.
 
 ## Event Pipeline (How Data Flows)
 
 ```
-Agent (Claude CLI in Docker container)
-  ↓ writes JSONL
-.agentic/analytics/events.jsonl
-  ↓ watched by
-HookWatcher (file watcher in collector)
-  ↓ batches events
-Collector Service (POST /events, port 8080)
-  ↓ deduplicates (SHA-256 event_id)
-  ↓ writes to
-TimescaleDB (observability hypertable)
-  ↓ subscription
-ProjectionManager
-  ↓ dispatches to
-Projections:
-  ├── SessionListProjection (session_summaries)
-  ├── SessionCostProjection (session_cost)
-  ├── TokenMetricsProjection (token_metrics)
-  └── ToolTimelineProjection (tool_timelines)
-  ↓ queryable via
-API Routes → CLI / Dashboard
+Agent (Claude CLI in Docker)
+  → writes .agentic/analytics/events.jsonl
+  → HookWatcher (file watcher)
+  → Collector (POST /events, port 8080)
+  → TimescaleDB (observability hypertable)
+  → Projections: SessionList, SessionCost, TokenMetrics, ToolTimeline
+  → API → CLI / Dashboard
 ```
 
-### Event Types Captured
+Events are deduplicated by SHA-256 `event_id` — safe to replay or retry ingestion.
 
-| Category | Event Types |
-|----------|-------------|
-| Session | `SESSION_STARTED`, `SESSION_ENDED`, `AGENT_STOPPED` |
-| Subagent | `SUBAGENT_STARTED`, `SUBAGENT_STOPPED` |
-| Tools | `TOOL_EXECUTION_STARTED`, `TOOL_EXECUTION_COMPLETED`, `TOOL_BLOCKED` |
-| Tokens | `TOKEN_USAGE` |
-| User | `USER_PROMPT_SUBMITTED`, `NOTIFICATION_SENT` |
-| Context | `PRE_COMPACT` |
-| Git | `GIT_COMMIT`, `GIT_PUSH_*`, `GIT_BRANCH_*`, `GIT_MERGE_*` |
-| Workspace | `WORKSPACE_CREATING`, `WORKSPACE_CREATED`, `WORKSPACE_DESTROYED`, `WORKSPACE_ERROR` |
-| Cost | `COST_RECORDED`, `SESSION_COST_FINALIZED` |
+## Escalation Point
 
-## Interpreting Observability Data
+If session costs keep exceeding expectations after adjusting model selection, investigate whether the workflow's phase prompts are loading unnecessary context. The `tokens_by_tool` breakdown will show if `Read` is called on large files unnecessarily. Restructure prompts to target specific files rather than scanning broadly.
 
-### "Why was this session expensive?"
+## Integration
 
-1. Check token metrics — high `output_tokens` usually means verbose responses
-2. Check tool timeline — many tool calls accumulate tokens (each call includes context)
-3. Check `cost_by_model` — opus is ~10x more expensive than haiku
-4. Check `cache_read_tokens` — low cache hits mean repeated context loading
-
-### "Why did this session fail?"
-
-1. Check `sessions show` — look at `error_message` and last operations
-2. Check tool timeline — look for `TOOL_BLOCKED` events or failed tools
-3. Check the session's execution — was the workspace healthy?
-
-### "What tools did the agent use most?"
-
-1. Check tool timeline — count by `tool_name`
-2. Check `tokens_by_tool` in cost breakdown — shows which tools consume most tokens
-3. Common pattern: `Read` is used most, `Bash` is most expensive (long outputs)
-
-## Dashboard
-
-The Syn-Dashboard-UI at `http://localhost:5173` (dev) shows:
-- Real-time event feed
-- Session cost cards with model/tool breakdowns
-- Execution cost summaries
-- Tool cost breakdowns
-- Contribution heatmaps
-
-## CLI Quick Reference
-
-```bash
-# Sessions
-syn sessions list
-syn sessions list --workflow <workflow-id>
-syn sessions list --status running
-syn sessions show <session-id>
-
-# Artifacts
-syn artifacts list
-syn artifacts list --workflow <workflow-id>
-syn artifacts show <artifact-id>
-syn artifacts content <artifact-id> --raw
-
-# Observability (via API)
-curl -sf "http://localhost:8137/api/v1/events/sessions/<session-id>/tools?limit=100" | python3 -m json.tool
-curl -sf http://localhost:8137/api/v1/events/sessions/<session-id>/tokens | python3 -m json.tool
-curl -sf http://localhost:8137/api/v1/costs/summary | python3 -m json.tool
-curl -sf http://localhost:8137/api/v1/costs/sessions/<session-id> | python3 -m json.tool
-
-# Metrics
-curl -sf http://localhost:8137/api/v1/metrics | python3 -m json.tool
-curl -sf "http://localhost:8137/api/v1/metrics?workflow_id=<workflow-id>" | python3 -m json.tool
-```
-
-Use `/syn-insights` for interactive observability from Claude Code.
-Use `/syn-observe <session-id> [tools|tokens|errors]` for quick session inspection.
-Use `/syn-costs [summary|session <id>|workflow <id>]` for cost breakdowns.
+Start here after an execution completes or fails. Feeds back into workflow-management when you need to redesign phases based on cost patterns. Use `/syn-insights` for interactive queries from Claude Code.

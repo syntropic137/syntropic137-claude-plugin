@@ -1,341 +1,144 @@
 ---
 name: github-automation
 description: Set up GitHub App integration, create webhook trigger rules with safety limits, and automate Syntropic137 workflow execution from GitHub events
-user-invocable: false
 ---
 
 # GitHub Automation — Syntropic137
 
-Use this knowledge when the user wants to set up GitHub App integration, create webhook trigger rules, or automate workflow execution based on GitHub events.
+When you want workflows to run automatically on GitHub events — a PR opened, an issue created, a commit pushed — trigger rules are how you wire that up. **NEVER create trigger rules without setting safety limits.** Chatty webhooks, PR bots, and CI loops can fire your triggers hundreds of times per day without `daily_limit`, `cooldown_seconds`, and `max_attempts` in place.
 
-## GitHub App Integration
+## When to Use This Skill
 
-### How It Works
+Use this when you are: setting up the GitHub App for the first time, creating trigger rules to automate workflow execution, debugging why a trigger didn't fire, or managing existing trigger rules.
 
-Syntropic137 uses a GitHub App for:
-1. **Repository access** — Clone repos into isolated workspaces
-2. **Webhook triggers** — Automatically start workflows on push, PR, issue events
-3. **Status reporting** — Report execution results back to PRs
+Not needed for running workflows manually — use execution-control for that. Not needed for managing trigger rules interactively — use `/syn-triggers` for that.
 
-### Installation Lifecycle
+## The Trigger Rule Pattern
+
+A trigger rule says: *"When event X occurs on repo Y matching conditions Z, start workflow W with inputs mapped from the webhook payload."*
 
 ```
-GitHub App installed on org/repo
-  → AppInstalledEvent (InstallationAggregate)
-  → Repos registered automatically
-  → Webhooks start flowing
-
-Revoked:
-  → InstallationRevokedEvent
-  → Triggers paused
+GitHub Event (e.g., pull_request opened)
+  → Webhook → Cloudflare Tunnel → API gateway
+  → TriggerRuleAggregate evaluates conditions
+  → Safety guards check: concurrency, max_attempts, cooldown, daily_limit
+  → If all pass → WorkflowExecutionStarted
+  → input_mapping extracts values from webhook payload → workflow inputs
 ```
 
-### Setup
+The aggregate is the decision-maker. Safety guards run before any execution starts.
 
-GitHub App is configured during onboarding. Two paths:
-
-**New App (manifest flow — recommended):**
-
-**Source repo only:**
-```bash
-just onboard                              # Full setup wizard
-just onboard-dev                          # Dev setup (includes GitHub App)
-just setup-stage configure_github_app     # Re-run just the GitHub App stage
-just github-reconfigure                   # Alias for the above
-```
-
-The manifest flow:
-1. Opens browser to GitHub App creation page with pre-filled permissions
-2. Polls for completion (~5 min timeout)
-3. Downloads credentials: App ID, slug, PEM key, webhook secret
-4. Stores in `.env` as `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`; PEM saved to `secrets/github-app-private-key.pem` (mounted as Docker secret)
-
-**Existing App (manual):**
-
-**Source repo only:**
-```bash
-just setup-stage configure_github_app
-# Choose "existing" → provide App ID, name, PEM path, webhook secret
-```
-
-### Webhook Delivery
-
-Webhooks need to reach the API. Two options depending on your environment:
-
-| Method | Use Case | Setup |
-|--------|----------|-------|
-| **Cloudflare Tunnel** | Selfhost / production | Published path: configured during install. Source repo: `just onboard` configures tunnel + domain |
-| **Smee.io proxy** | Local development only | `just onboard-dev` auto-creates channel (source repo only) |
-
-**Selfhost / published path:** Cloudflare tunnels are the exclusive webhook delivery method. The tunnel routes GitHub webhooks through Cloudflare's network to your local API. Configure the tunnel's public hostname to point to `http://gateway:8081` in the Cloudflare Zero Trust dashboard.
-
-**Development (source repo only):**
-```bash
-just dev-webhooks         # Start Smee proxy manually
-just dev-webhooks-logs    # View proxy logs
-```
-
-### Required Environment Variables
-
-| Variable | Purpose |
-|----------|---------|
-| `SYN_GITHUB_APP_ID` | GitHub App ID |
-| `SYN_GITHUB_APP_NAME` | GitHub App slug |
-| `SYN_GITHUB_PRIVATE_KEY` | Base64-encoded PEM private key (legacy/dev fallback) |
-| `SYN_GITHUB_APP_PRIVATE_KEY_FILE` | PEM file path (selfhost — set by compose via Docker secret) |
-| `SYN_GITHUB_WEBHOOK_SECRET` | Webhook signature verification |
-| `DEV__SMEE_URL` | Smee proxy URL (dev only) |
-
-## Trigger Rules
-
-Trigger rules automate workflow execution based on GitHub webhook events. A trigger says: *"When event X happens on repo Y matching conditions Z, start workflow W with inputs mapped from the webhook payload."*
-
-### Creating Triggers
-
-```bash
-# Register a trigger rule via CLI
-syn triggers register \
-  --repo <repo-id> \
-  --workflow <workflow-id> \
-  --event pull_request \
-  --condition action=opened \
-  --condition base.ref=main \
-  --max-fires 3 \
-  --cooldown 300 \
-  --budget 5.00
-```
-
-### Via API (Alternative)
-
-```bash
-curl -X POST http://localhost:8137/api/v1/triggers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "PR Review Bot",
-    "event": "pull_request",
-    "repository": "syntropic137/syntropic137",
-    "installation_id": "<installation-id>",
-    "workflow_id": "<workflow-id>",
-    "conditions": [
-      {"field": "action", "operator": "equals", "value": "opened"},
-      {"field": "base.ref", "operator": "equals", "value": "main"}
-    ],
-    "input_mapping": {
-      "pr_url": "pull_request.html_url",
-      "pr_title": "pull_request.title",
-      "pr_body": "pull_request.body",
-      "repository": "repository.full_name"
-    },
-    "config": {
-      "max_attempts": 3,
-      "budget_per_trigger_usd": 5.00,
-      "daily_limit": 20,
-      "cooldown_seconds": 300
-    }
-  }'
-```
-
-### Input Mapping
-
-Maps webhook payload fields to workflow inputs using dot notation:
+## Safety Limits — Set These Every Time
 
 ```json
 {
-  "pr_url": "pull_request.html_url",
-  "repo_name": "repository.full_name",
-  "branch": "pull_request.head.ref",
-  "author": "sender.login",
-  "repository": "repository.full_name"
+  "max_attempts": 3,
+  "budget_per_trigger_usd": 5.00,
+  "daily_limit": 20,
+  "cooldown_seconds": 300
 }
 ```
 
-The `repository` input is special — workflows with `{{repository}}` in their `repository.url` field will clone the triggering repo instead of a hardcoded one.
+| Limit | What It Prevents |
+|-------|-----------------|
+| `max_attempts` | Re-firing on the same PR more than N times |
+| `budget_per_trigger_usd` | A single trigger fire spending more than budget |
+| `daily_limit` | The rule firing more than N times total per day |
+| `cooldown_seconds` | Rapid re-fires on the same PR within the cooldown window |
 
-### Safety Limits (TriggerConfig)
+The built-in **concurrency guard** is automatic — if an execution is already `RUNNING` for the same `(trigger_id, pr_number)`, new events for that pair are blocked. This prevents catch-up storms after a restart.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `max_attempts` | 3 | Max fires per (PR, trigger) combo |
-| `budget_per_trigger_usd` | 5.00 | Cost limit per trigger fire |
-| `daily_limit` | 20 | Max fires per day for this rule |
-| `debounce_seconds` | 0 | Batch rapid events into one fire |
-| `cooldown_seconds` | 300 | Min time between fires for same PR |
+## GitHub App Setup
 
-**Concurrency guard** — In addition to the configurable limits above, a built-in concurrency guard prevents catch-up storms after restart. If an execution is already RUNNING for the same `(trigger_id, pr_number)`, new events for that pair are blocked instead of firing duplicates.
+The GitHub App provides: repository access for workspace cloning, webhook delivery, and status reporting back to PRs.
 
-These prevent runaway costs from chatty webhooks or infinite loops.
-
-### Managing Triggers
-
+**First-time setup (recommended — manifest flow):**
 ```bash
-# List all triggers
-syn triggers list
+npx @syntropic137/setup github-app
+```
+This opens a browser to GitHub App creation with pre-filled permissions, polls for completion, and saves the App ID, PEM key, and webhook secret to your config.
 
-# List triggers for a specific repo or by status
-syn triggers list --repo <repo-id>
-syn triggers list --status active
-
-# Show trigger details
-syn triggers show <trigger-id>
-
-# View trigger fire history
-syn triggers history <trigger-id>
-
-# Pause a trigger (stops firing but keeps config)
-syn triggers pause <trigger-id>
-
-# Resume a paused trigger
-syn triggers resume <trigger-id>
-
-# Delete permanently
-syn triggers delete <trigger-id>
-
-# Emergency: disable all triggers
-syn triggers disable-all
-
-# Enable a preset trigger for a repo
-syn triggers enable <preset> --repo <repo-id> --workflow <workflow-id>
+**Source repo developers:**
+```bash
+just onboard-dev              # includes GitHub App + webhook proxy (Smee.io for local)
+just setup-stage configure_github_app   # re-run just the App stage
 ```
 
-### Via API (Alternative)
+**Webhook delivery:** Self-hosters use Cloudflare tunnel (route to `http://gateway:8081`). Local dev uses Smee.io (`just dev-webhooks`).
+
+## Creating a Trigger Rule — 3 Steps
+
+**Step 1:** Ensure the GitHub App is installed on the target repo and the workflow you want to trigger is registered (`syn workflow list`).
+
+**Step 2:** Register the trigger with safety limits:
 
 ```bash
-# List all triggers
-curl -sf http://localhost:8137/api/v1/triggers
-
-# Pause a trigger (stops firing but keeps config)
-curl -sf -X POST http://localhost:8137/api/v1/triggers/<trigger-id>/pause
-
-# Resume a paused trigger
-curl -sf -X POST http://localhost:8137/api/v1/triggers/<trigger-id>/resume
-
-# Delete permanently
-curl -sf -X DELETE http://localhost:8137/api/v1/triggers/<trigger-id>
-```
-
-### Supported GitHub Events
-
-| Event | Description | Common Conditions |
-|-------|-------------|-------------------|
-| `push` | Code pushed | `ref=refs/heads/main` |
-| `pull_request` | PR opened/updated/closed | `action=opened`, `base.ref=main` |
-| `issues` | Issue created/updated | `action=opened`, `labels` |
-| `issue_comment` | Comment on issue/PR | `action=created` |
-| `workflow_run` | GitHub Actions completed | `action=completed` |
-
-### Trigger Conditions
-
-Conditions use field/operator/value matching against the webhook payload:
-
-```json
-{"field": "action", "operator": "equals", "value": "opened"}
-{"field": "base.ref", "operator": "equals", "value": "main"}
-{"field": "pull_request.draft", "operator": "equals", "value": "false"}
-```
-
-### Domain Model
-
-- **Aggregate**: `TriggerRuleAggregate`
-- **Status**: `ACTIVE` | `PAUSED` | `DELETED`
-- **Events**: `TriggerRegisteredEvent`, `TriggerFiredEvent`, `TriggerBlockedEvent`, `TriggerPausedEvent`, `TriggerResumedEvent`, `TriggerDeletedEvent`
-- **Key state**: `name`, `event`, `conditions`, `repository`, `workflow_id`, `input_mapping`, `config`, `fire_count`
-
-### Seeding Triggers
-
-**Source repo only:**
-```bash
-just seed-triggers    # Seed preset triggers (self-healing, review-fix)
-just seed-all         # Seed everything
-```
-
-## Common Scenarios
-
-### "Set up automatic PR reviews"
-
-1. Create a review workflow (e.g., the `github-pr` example workflow)
-2. Create a trigger:
-   ```bash
-   syn triggers register \
-     --repo <repo-id> \
-     --workflow <workflow-id> \
-     --event pull_request \
-     --condition action=opened \
-     --budget 2.00 \
-     --cooldown 300
-   ```
-3. Install GitHub App on the target repo
-
-### "Auto-fix issues when they're created"
-
-1. Create an implementation workflow with issue-driven phases
-2. Create a trigger:
-   ```bash
-   syn triggers register \
-     --repo <repo-id> \
-     --workflow <workflow-id> \
-     --event issues \
-     --condition action=opened \
-     --budget 5.00 \
-     --max-fires 10
-   ```
-3. Set conservative budget limits
-
-### "Why didn't my trigger fire?"
-
-1. **Check trigger history first** — blocked entries now show the exact guard and reason:
-   ```bash
-   syn triggers history <trigger-id>
-   ```
-   Blocked entries display `status: blocked` with `guard_name` and `block_reason`:
-   - `concurrency` — execution already running for same trigger + PR
-   - `max_attempts` — max fires reached for that PR
-   - `cooldown` — too soon since last fire
-   - `daily_limit` — daily fire cap reached
-   - `idempotency` — duplicate event already processed
-   - `conditions_not_met` — webhook payload didn't match conditions
-2. Check trigger status — might be `PAUSED` or `DELETED`: `syn triggers show <trigger-id>`
-3. Check installation — GitHub App might be revoked
-4. Check webhook delivery — selfhost: check Cloudflare tunnel status; dev: `just dev-webhooks-logs` (source repo only) for Smee issues
-
-### "How do I test triggers locally?"
-
-1. Start the stack:
-   - Published path: `cd ~/.syntropic137 && ./syn-ctl up`
-   - **Source repo only:** `just dev` (includes webhook proxy)
-2. Verify webhooks are being delivered:
-   - Selfhost: check Cloudflare tunnel status in Zero Trust dashboard
-   - **Source repo only:** `just dev-webhooks-logs`
-3. Create a trigger pointing to a test workflow
-4. Open a PR on the target repo — watch the execution start
-5. **Source repo only:** Record webhooks for replay: `just dev-record-webhooks`
-6. **Source repo only:** Replay later: `just replay-webhooks`
-
-## CLI Quick Reference
-
-```bash
-# List triggers
-syn triggers list
-syn triggers list --repository owner/repo
-
-# Register a trigger
 syn triggers register \
   --name "pr-review" \
   --event pull_request \
   --repository owner/repo \
-  --workflow <workflow-id>
-
-# Enable / pause
-syn triggers enable <name> --repository owner/repo
-syn triggers pause <id> --reason "maintenance"
-
-# List GitHub App repos
-syn github repos
-syn github repos --installation <id>
-
-# GitHub App setup
-npx @syntropic137/setup github-app
+  --workflow <workflow-id> \
+  --condition action=opened \
+  --condition base.ref=main \
+  --max-fires 3 \
+  --budget 5.00 \
+  --cooldown 300
 ```
 
-Supported events: `push`, `pull_request`, `issues`, `issue_comment`, `check_run`, `workflow_run`
+**Step 3:** Verify: `syn triggers list --repository owner/repo` — the trigger should be `ACTIVE`.
 
-Use `/syn-triggers` to run these commands interactively from Claude Code.
+## Input Mapping
+
+Map webhook payload fields to workflow inputs using dot notation:
+
+```json
+{
+  "pr_url": "pull_request.html_url",
+  "repository": "repository.full_name",
+  "branch": "pull_request.head.ref",
+  "author": "sender.login"
+}
+```
+
+The `repository` input is special — if your workflow template uses `{{repository}}` in its `repository.url`, it will clone the triggering repo automatically.
+
+## Debugging a Trigger That Didn't Fire
+
+**First: check trigger history** — blocked entries show exactly which guard blocked the event and why:
+
+```bash
+syn triggers history <trigger-id>
+```
+
+Guard names and what they mean:
+- `concurrency` — execution already running for this trigger + PR
+- `max_attempts` — PR hit the per-trigger fire limit
+- `cooldown` — fired too recently for this PR
+- `daily_limit` — daily cap reached for this rule
+- `conditions_not_met` — webhook payload didn't match conditions
+
+If no history entries exist, the webhook may not have arrived. Check: `syn triggers show <id>` for status, then verify the GitHub App installation and webhook delivery (Cloudflare tunnel / Smee).
+
+## Supported Events
+
+`push`, `pull_request`, `issues`, `issue_comment`, `workflow_run`, `check_run`
+
+Conditions use field/operator/value matching: `{"field": "action", "operator": "equals", "value": "opened"}`. Dot notation traverses the payload: `pull_request.draft`, `repository.full_name`, `sender.login`.
+
+## Managing Triggers
+
+```bash
+syn triggers list
+syn triggers pause <id> --reason "investigating"
+syn triggers resume <id>
+syn triggers disable-all          # emergency stop
+syn triggers delete <id>          # permanent
+```
+
+## Escalation Point
+
+If triggers fire repeatedly without producing useful output (agent runs complete but don't act on the PR), the problem is likely in the workflow template's `input_mapping` — the workflow isn't receiving the right inputs from the payload. Check `syn triggers history <id>` for what was actually passed as inputs, then compare to what the workflow expects.
+
+## Integration
+
+Set up GitHub App first, then create workflows with workflow-management, then wire triggers here. Monitor trigger-fired executions with execution-control and observability. Use `/syn-triggers` for interactive trigger management from Claude Code.
