@@ -4,7 +4,7 @@
 
 # Syntropic137 Claude Code Plugin
 
-Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, kick off executions, monitor costs, troubleshoot issues — all through natural conversation.
+Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, kick off executions, monitor costs, and troubleshoot issues through natural conversation.
 
 ## Agent Quick Start
 
@@ -17,7 +17,7 @@ Turn Claude Code into your Syntropic137 orchestration brain. Create workflows, k
 >    ```bash
 >    npx @syntropic137/setup
 >    ```
-> 3. That's it. The setup CLI is fully interactive — it handles Docker, secrets, GitHub App, and starting the stack. The user runs it in their own terminal and comes back when done.
+> 3. That's it. The setup CLI is fully interactive: it handles Docker, secrets, GitHub App, and starting the stack. The user runs it in their own terminal and comes back when done.
 
 ## Installation
 
@@ -57,7 +57,7 @@ npx @syntropic137/setup
 ```
 
 The setup CLI checks Docker, generates secrets, configures GitHub integration,
-pulls pre-built images, and starts the stack — all interactively in your terminal.
+pulls pre-built images, and starts the stack, all interactively in your terminal.
 Run it again any time to manage your installation (status, logs, update).
 
 ## Commands
@@ -74,7 +74,7 @@ Run it again any time to manage your installation (status, logs, update).
 
 ## Managing Your Stack
 
-Run `npx @syntropic137/setup` — the interactive menu shows all lifecycle commands (status, start, stop, logs, update).
+Run `npx @syntropic137/setup`: the interactive menu shows all lifecycle commands (status, start, stop, logs, update).
 
 **Source repo** (contributors): `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`
 
@@ -82,13 +82,13 @@ Run `npx @syntropic137/setup` — the interactive menu shows all lifecycle comma
 
 The plugin combines **slash commands** for quick actions with **deep skill knowledge** that lets Claude Code understand and operate the entire Syntropic137 platform intelligently.
 
-- **Commands** — Quick entry points for common operations (delegate to `syn` CLI and `just` recipes)
-- **Skills** — Deep domain knowledge that Claude uses to reason about your platform (see below)
-- **Hook** — Session start connectivity check, so Claude knows if the platform is up
+- **Commands**: Quick entry points for common operations (delegate to `syn` CLI and `just` recipes)
+- **Skills**: Deep domain knowledge that Claude uses to reason about your platform (see below)
+- **Hook**: Session start connectivity check, so Claude knows if the platform is up
 
 ## Skills (Domain Knowledge)
 
-Skills give Claude deep understanding of the system. They're automatically loaded when relevant — you don't invoke them directly. Claude uses this knowledge to answer questions, suggest approaches, and troubleshoot issues.
+Skills give Claude deep understanding of the system. They're automatically loaded when relevant; you don't invoke them directly. Claude uses this knowledge to answer questions, suggest approaches, and troubleshoot issues.
 
 | Skill | What Claude Learns |
 |-------|-------------------|
@@ -130,7 +130,7 @@ syntropic137-claude-plugin/
 
 ### Additional Prerequisites (Development)
 
-- [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) — for the dashboard frontend
+- [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) for the dashboard frontend
 - Use `just onboard-dev` (not `just onboard`) for local development setup
 
 ### Working on the Plugin
@@ -141,7 +141,7 @@ cd lib/syntropic137-claude-plugin
 claude plugin install . --scope project
 ```
 
-**Important:** Bump the `version` in `.claude-plugin/plugin.json` on every content change — Claude Code uses the version field to detect plugin updates and will serve a cached copy otherwise.
+**Important:** Bump the `version` in `.claude-plugin/plugin.json` on every content change. Claude Code uses the version field to detect plugin updates and will serve a cached copy otherwise.
 
 ## License
 
