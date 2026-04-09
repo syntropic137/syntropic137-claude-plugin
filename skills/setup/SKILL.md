@@ -1,11 +1,24 @@
 ---
 name: setup
-description: Syntropic137 platform setup — 14-stage onboarding wizard, 1Password, Cloudflare tunnels, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
+description: Syntropic137 platform setup — npx setup CLI, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
 ---
 
 # Setup & Infrastructure — Syntropic137
 
 Use this knowledge when the user asks about setting up the platform, configuring secrets, managing the Docker stack, understanding the justfile recipes, or troubleshooting infrastructure issues.
+
+## Quick Setup (Recommended)
+
+Self-host setup is handled by a single npx command:
+
+```bash
+npx @syntropic137/setup        # Existing install — detect and update/add features
+npx @syntropic137/setup init   # Fresh install — full interactive wizard
+```
+
+The CLI handles everything: Docker checks, secret generation, API key collection, GitHub App creation, Cloudflare tunnels, 1Password backup, image pulls, stack start, and health checks. The `/syn-setup` plugin command is a thin wrapper that checks for Node.js 18+ and then instructs the user to run `npx @syntropic137/setup` in their own terminal.
+
+> The `syn` CLI (`@syntropic137/cli`) is installed globally during setup. Self-hosters use `syn` directly for all platform operations. Source repo developers can also use `just cli <args>` as an equivalent.
 
 ## API URL — `SYN_API_URL`
 
@@ -36,23 +49,20 @@ SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 - Events: `$SYN_API_URL/api/v1/events/sessions/<id>`
 - Triggers: `$SYN_API_URL/api/v1/triggers`
 
-Every plugin command resolves this before making API calls. If the user is on a remote server, `SYN_PUBLIC_HOSTNAME` gets set during Cloudflare tunnel setup (Phase 8 of `/syn-setup`).
+Every plugin command resolves this before making API calls. If the user is on a remote server, `SYN_PUBLIC_HOSTNAME` gets set during Cloudflare tunnel setup (handled by `npx @syntropic137/setup`).
 
 ## Onboarding Paths
 
 ### Published Path (Self-Hosters)
 
-Self-hosters install to `~/.syntropic137/` and use `syn-ctl` for management. No `uv`, `just`, or source repo required.
+Self-hosters run `npx @syntropic137/setup` (or `/syn-setup` in Claude Code) to install to `~/.syntropic137/`. The npx CLI handles both setup and ongoing management. No `uv`, `just`, or source repo required.
 
 ```bash
-cd ~/.syntropic137
-./syn-ctl up                  # Start the stack
-./syn-ctl down                # Stop the stack
-./syn-ctl logs [service]      # View logs
-./syn-ctl update              # Pull latest images and restart
+npx @syntropic137/setup       # Interactive menu (setup, status, start, stop, logs, update)
+npx @syntropic137/setup init  # Fresh install — full interactive wizard
 ```
 
-The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. All stack management goes through `syn-ctl` or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
+The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. Stack management goes through `npx @syntropic137/setup` (interactive menu) or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
 
 ### Quick Dev Setup (Source Repo)
 
@@ -82,7 +92,7 @@ just onboard --non-interactive  # CI/CD mode (reads from env vars)
 just onboard --stage <name>   # Re-run a specific stage
 ```
 
-### Setup Stages (14 total)
+### Setup Stages (14 total, handled by `npx @syntropic137/setup`)
 
 | # | Stage | What It Does | Can Re-run? |
 |---|-------|-------------|-------------|
@@ -119,7 +129,8 @@ Re-run any stage: `just setup-stage <stage_name>`
 | `APP_ENVIRONMENT` | Yes | `development`, `selfhost`, `beta`, `staging`, `production` |
 | `SYN_GITHUB_APP_ID` | For GitHub | GitHub App ID |
 | `SYN_GITHUB_APP_NAME` | For GitHub | GitHub App slug |
-| `SYN_GITHUB_PRIVATE_KEY` | For GitHub | Base64-encoded PEM private key |
+| `SYN_GITHUB_PRIVATE_KEY` | For GitHub | Base64-encoded PEM private key (legacy/dev fallback) |
+| `SYN_GITHUB_APP_PRIVATE_KEY_FILE` | Selfhost | Set by compose — points to Docker secret mount. Users place PEM at `secrets/github-app-private-key.pem` |
 | `SYN_GITHUB_WEBHOOK_SECRET` | For GitHub | Webhook HMAC secret |
 | `ANTHROPIC_API_KEY` | For agents | Anthropic API key |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Alt agents | Alternative to API key |
@@ -180,7 +191,20 @@ The wizard saves to a `syntropic137-config` item in the vault with fields:
 
 Zero-trust external access — webhooks from GitHub, remote dashboard access, API access.
 
-### Flow
+### Self-Host
+
+Run the interactive tunnel wizard:
+
+```bash
+npx @syntropic137/setup tunnel
+```
+
+This prompts for your Cloudflare tunnel token and public hostname, writes them to `.env`, and optionally restarts the stack. After setup:
+1. Verify: open `https://your-hostname`
+2. Update your GitHub App webhook URL to `https://your-hostname/api/v1/github/webhooks`
+3. Run `npx @syntropic137/setup github-app` to open GitHub App settings
+
+### Source Repo (Developers)
 
 1. Create Cloudflare account + add domain
 2. Go to Zero Trust dashboard → Network → Tunnels → Create
@@ -210,7 +234,7 @@ just secrets-unseal     # Decrypt from .enc files
 Located in `infra/docker/secrets/`:
 - `db-password.secret` (32-byte hex, permissions 600)
 - `redis-password.secret` (32-byte hex, permissions 600)
-- `github-private-key.pem` (optional, base64 in .env preferred)
+- `github-app-private-key.pem` (Docker secret mount in selfhost compose — tmpfs, never on disk)
 - `cloudflare-tunnel-token.secret` (if using tunnel)
 
 ## Docker Compose Stack
@@ -238,7 +262,7 @@ Located in `infra/docker/secrets/`:
 | MinIO | `syn-minio` | 9000/9001 | S3 artifact storage |
 | Envoy Proxy | `syn-envoy` | 8081/9901 | Token injection proxy |
 | Dashboard | (host process) | 5173 | Vite + React |
-| Pulse | (host process) | 5174 | Metrics UI |
+| Pulse UI | (host process / gateway `/pulse/`) | 5174 | Activity heatmap / contribution visualization |
 
 ### Selfhost Security Hardening
 

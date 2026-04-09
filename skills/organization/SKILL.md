@@ -26,6 +26,25 @@ This hierarchy enables:
 
 ```bash
 # List organizations
+syn organization list
+
+# Create organization
+syn organization create --name "Syntropic137" --slug "syn137"
+
+# Get organization detail
+syn organization show <org-id>
+
+# Update
+syn organization update <org-id> --name "New Name"
+
+# Delete (soft delete — cannot update/delete again after)
+syn organization delete <org-id>
+```
+
+### Via API (Alternative)
+
+```bash
+# List organizations
 curl -s http://localhost:8137/organizations | python -m json.tool
 
 # Create organization
@@ -54,6 +73,31 @@ curl -X DELETE http://localhost:8137/organizations/<org-id>
 ## Systems
 
 Systems group related repos for monitoring and cost analysis.
+
+```bash
+# List systems in an org
+syn system list --organization <org-id>
+
+# Create system
+syn system create --organization <org-id> --name "Backend Services" --description "API and domain services"
+
+# Get system detail (includes health, cost data)
+syn system show <system-id>
+
+# Get system health status
+syn system status <system-id>
+
+# Get system cost
+syn system cost <system-id>
+
+# Update
+syn system update <system-id> --name "New Name"
+
+# Delete
+syn system delete <system-id>
+```
+
+### Via API (Alternative)
 
 ```bash
 # List systems in an org
@@ -88,6 +132,31 @@ curl -s http://localhost:8137/systems/<system-id>/cost | python -m json.tool
 ## Repositories
 
 Repos are registered from GitHub App installations and can be assigned to systems.
+
+```bash
+# List repos
+syn repo list --organization <org-id>
+
+# Register repo (usually automatic via GitHub App)
+syn repo register --organization <org-id> --provider github --full-name syntropic137/syntropic137 --installation-id <installation-id>
+
+# Get repo detail
+syn repo show <repo-id>
+
+# Assign repo to system
+syn repo assign <repo-id> --system <system-id>
+
+# Unassign from system (must unassign before reassigning)
+syn repo unassign <repo-id>
+
+# Health, cost, activity, and failure data
+syn repo health <repo-id>
+syn repo cost <repo-id>
+syn repo activity <repo-id>
+syn repo failures <repo-id>
+```
+
+### Via API (Alternative)
 
 ```bash
 # List repos
@@ -127,15 +196,16 @@ The organization context has rich read models for operational intelligence:
 
 | Read Model | Purpose | Query |
 |-----------|---------|-------|
-| `GlobalOverview` | Cross-org overview with cost rollup | `GET /organizations/overview` |
-| `SystemStatus` | Per-system health (healthy/degraded/failing) | `GET /systems/{id}/status` |
+| `GlobalOverview` | Cross-org overview with cost rollup | `syn insights overview` |
+| `SystemStatus` | Per-system health (healthy/degraded/failing) | `syn system status <id>` |
 | `SystemPatterns` | Execution patterns and trends | `GET /systems/{id}/patterns` |
-| `SystemCost` | System-level cost aggregation | `GET /systems/{id}/cost` |
-| `ContributionHeatmap` | Team contribution patterns | `GET /insights/heatmap` |
+| `SystemCost` | System-level cost aggregation | `syn system cost <id>` |
+| `ContributionHeatmap` | Team contribution patterns | `syn insights heatmap` |
+| `CostInsights` | Cost breakdown and analysis | `syn insights cost` |
 
 ## Seeding Data
 
-For development, seed sample org/system/repo data:
+**Source repo only:** For development, seed sample org/system/repo data:
 
 ```bash
 just seed-organization    # Seed org, system, repos
@@ -146,35 +216,36 @@ just seed-all             # Seed everything (workflows + triggers + org)
 
 ### "Track costs across my backend services"
 
-1. Create an organization
-2. Create a "Backend" system
-3. Register repos and assign to the system
-4. View system cost: `GET /systems/<id>/cost`
+1. Create an organization: `syn organization create --name "MyOrg" --slug "myorg"`
+2. Create a "Backend" system: `syn system create --organization <org-id> --name "Backend" --description "Backend services"`
+3. Register repos and assign to the system: `syn repo assign <repo-id> --system <system-id>`
+4. View system cost: `syn system cost <system-id>`
 
 ### "See health across all my repos"
 
 1. Ensure repos are registered and assigned to systems
-2. Check system status: `GET /systems/<id>/status` — shows healthy/degraded/failing per repo
-3. Global overview: `GET /organizations/overview` — cross-org summary
+2. Check system status: `syn system status <system-id>` — shows healthy/degraded/failing per repo
+3. Global overview: `syn insights overview` — cross-org summary
 
 ## CLI Quick Reference
 
 ```bash
-# Organizations (via API)
-curl -sf http://localhost:8137/api/v1/organizations | python3 -m json.tool
-curl -sf http://localhost:8137/api/v1/organizations/overview | python3 -m json.tool
+# Organizations
+syn org list
+syn insights overview
 
 # Systems
-curl -sf http://localhost:8137/api/v1/systems | python3 -m json.tool
-curl -sf "http://localhost:8137/api/v1/systems?organization_id=<org-id>" | python3 -m json.tool
+syn system list
+syn system status <system-id>
+syn system cost <system-id>
 
 # Repos
 syn github repos
-curl -sf http://localhost:8137/api/v1/repos | python3 -m json.tool
+syn repo list
 
-# System health and cost
+# Fallback (API)
+curl -sf http://localhost:8137/api/v1/organizations/overview | python3 -m json.tool
 curl -sf http://localhost:8137/api/v1/systems/<system-id>/status | python3 -m json.tool
-curl -sf http://localhost:8137/api/v1/systems/<system-id>/cost | python3 -m json.tool
 ```
 
 Use `/syn-repo` to query these from Claude Code.

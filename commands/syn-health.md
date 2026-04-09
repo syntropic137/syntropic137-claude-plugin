@@ -19,13 +19,21 @@ fi
 SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 ```
 
-Run the health check:
+Detect whether the `syn` CLI is available:
 
 ```bash
-curl -sf "$SYN_API_URL/health"
+if command -v syn &>/dev/null; then
+    SYN_CLI="syn"
+else
+    SYN_CLI=""
+fi
 ```
 
-If the command succeeds, display the health response JSON.
+Run the health check:
+- If SYN_CLI is set: `$SYN_CLI health`
+- Otherwise: `curl -sf "$SYN_API_URL/health"`
+
+If the command succeeds, display the health response.
 
 If it fails (non-zero exit or connection error):
 1. Check if Docker is running: `docker info >/dev/null 2>&1`

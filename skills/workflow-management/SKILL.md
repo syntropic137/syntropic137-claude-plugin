@@ -192,24 +192,24 @@ phases:
 
 ```bash
 # Validate a YAML definition
-uv run --package syn-cli syn workflow validate ./my-workflow.yaml
+syn workflow validate ./my-workflow.yaml
 
-# Create from YAML (seeded at startup)
+# Source repo only: Create from YAML (seeded at startup)
 just seed-workflows
 
 # Basic creation via CLI flags
-uv run --package syn-cli syn workflow create "Fix Bug in Auth Service" \
+syn workflow create "Fix Bug in Auth Service" \
   --type implementation \
   --repo syntropic137/syntropic137 \
   --description "Analyze the bug, implement a fix, and review the changes"
 
 # Run with --task flag (maps to $ARGUMENTS)
-uv run --package syn-cli syn workflow run <workflow-id> \
+syn workflow run <workflow-id> \
   --task "Investigate the auth middleware timeout bug" \
   --input repository=syntropic137/syntropic137
 
 # Short form
-uv run --package syn-cli syn run <workflow-id> -t "Fix the login regression"
+syn run <workflow-id> -t "Fix the login regression"
 ```
 
 ### Via API
@@ -276,10 +276,10 @@ curl -X POST http://localhost:8137/workflows/<workflow-id>/execute \
 
 ```bash
 # List all workflow templates
-uv run --package syn-cli syn workflow list
+syn workflow list
 
 # Show template details (phases, config)
-uv run --package syn-cli syn workflow show <workflow-id>
+syn workflow show <workflow-id>
 
 # List execution runs for a workflow
 curl -s http://localhost:8137/workflows/<workflow-id>/runs | python -m json.tool

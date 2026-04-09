@@ -39,16 +39,16 @@ CompleteSessionCommand → SessionCompletedEvent → COMPLETED | FAILED | CANCEL
 
 ```bash
 # List all sessions
-uv run --package syn-cli syn sessions list
+syn sessions list
 
 # Filter by workflow
-uv run --package syn-cli syn sessions list --workflow <workflow-id>
+syn sessions list --workflow <workflow-id>
 
 # Filter by status
-uv run --package syn-cli syn sessions list --status running
+syn sessions list --status running
 
 # Session detail
-uv run --package syn-cli syn sessions show <session-id>
+syn sessions show <session-id>
 ```
 
 ### API Endpoints
@@ -123,7 +123,7 @@ Detailed tool execution traces — when each tool was called, how long it took, 
 
 ```bash
 # View tool timeline for a session
-uv run --package syn-cli syn observe tools <session-id>
+syn observe tools <session-id>
 
 # Via API
 curl -s "http://localhost:8137/observability/sessions/<session-id>/tools?limit=100" | python -m json.tool
@@ -158,7 +158,7 @@ Per-message token usage with cache statistics.
 
 ```bash
 # View token metrics for a session
-uv run --package syn-cli syn observe tokens <session-id>
+syn observe tokens <session-id>
 
 # Via API
 curl -s "http://localhost:8137/observability/sessions/<session-id>/tokens" | python -m json.tool
@@ -191,13 +191,13 @@ Default pricing (configurable):
 
 ```bash
 # Overall cost summary
-uv run --package syn-cli syn costs summary
+syn costs summary
 
 # Cost for a specific session
-uv run --package syn-cli syn costs session <session-id>
+syn costs session <session-id>
 
 # Cost for a workflow's executions
-uv run --package syn-cli syn costs workflow <workflow-id>
+syn costs workflow <workflow-id>
 ```
 
 ### Cost Breakdowns Available
@@ -227,10 +227,10 @@ Aggregated metrics across sessions and executions.
 
 ```bash
 # Overall metrics
-uv run --package syn-cli syn metrics show
+syn metrics show
 
 # Metrics for a specific workflow
-uv run --package syn-cli syn metrics show --workflow <workflow-id>
+syn metrics show --workflow <workflow-id>
 ```
 
 ### API Endpoints
