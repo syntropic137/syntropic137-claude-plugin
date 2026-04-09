@@ -1,18 +1,18 @@
 ---
 name: setup
-description: Syntropic137 platform setup — npx setup CLI, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
+description: Syntropic137 platform setup; npx setup CLI, Docker Compose stack, justfile recipes, secrets management, and troubleshooting
 ---
 
-# Setup & Infrastructure — Syntropic137
+# Setup & Infrastructure: Syntropic137
 
-When something stops working at the infrastructure level — services won't start, webhooks aren't arriving, the workspace image is stale — this skill has the answers. Setup is handled by a single CLI command that covers the entire lifecycle.
+When something stops working at the infrastructure level (services won't start, webhooks aren't arriving, the workspace image is stale), this skill has the answers. Setup is handled by a single CLI command that covers the entire lifecycle.
 
 ## Which Path Is Right For You?
 
 **Self-hosters** (running `~/.syntropic137/` install):
 ```bash
 npx @syntropic137/setup        # detect and update/add features on existing install
-npx @syntropic137/setup init   # fresh install — full interactive wizard
+npx @syntropic137/setup init   # fresh install: full interactive wizard
 ```
 This handles Docker checks, secret generation, API keys, GitHub App, Cloudflare tunnels, and health checks. The `syn` CLI is installed globally during setup.
 
@@ -28,13 +28,13 @@ just onboard                  # full 14-stage wizard (mirrors the npx experience
 ## API URL Resolution
 
 Every command that hits the platform API resolves the base URL in this order:
-1. `SYN_API_URL` env var — explicit override
-2. `SYN_PUBLIC_HOSTNAME` from `~/.syntropic137/.env` — for published/tunneled installs
+1. `SYN_API_URL` env var (explicit override)
+2. `SYN_PUBLIC_HOSTNAME` from `~/.syntropic137/.env` (for published/tunneled installs)
 3. Default: `http://localhost:8137`
 
 If you're getting connection errors, verify which URL is being used. Remote installs must have `SYN_PUBLIC_HOSTNAME` set or `SYN_API_URL` in the environment.
 
-## Setup Stages (14 total — all re-runnable)
+## Setup Stages (14 total, all re-runnable)
 
 The wizard runs these in order. You can re-run any individual stage:
 
@@ -61,9 +61,9 @@ Re-run a single stage: `just setup-stage <stage_name>` (source repo) or `npx @sy
 
 Two files are kept separate to isolate application config from infrastructure config:
 
-**Root `.env`** — application: `ANTHROPIC_API_KEY`, `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`, `APP_ENVIRONMENT`
+**Root `.env`** (application): `ANTHROPIC_API_KEY`, `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`, `APP_ENVIRONMENT`
 
-**`infra/.env`** — infrastructure: `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_DOMAIN`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`
+**`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_DOMAIN`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`
 
 Run `just dev-doctor` to diagnose env var issues.
 
@@ -77,21 +77,21 @@ just secrets-seal       # encrypt for safe commit
 just secrets-unseal     # decrypt
 ```
 
-In selfhost, the GitHub App PEM is a Docker secret mounted at runtime — it never lands on disk as a file. The compose file handles the mount automatically.
+In selfhost, the GitHub App PEM is a Docker secret mounted at runtime; it never lands on disk as a file. The compose file handles the mount automatically.
 
 ## Troubleshooting Decision Tree
 
 **Services won't start:**
-1. `docker info` — is Docker running?
-2. `just setup-check` — prerequisites met?
-3. `just dev-doctor` — env vars correct?
-4. `just health-check` — which service is unhealthy?
+1. `docker info` (is Docker running?)
+2. `just setup-check` (prerequisites met?)
+3. `just dev-doctor` (env vars correct?)
+4. `just health-check` (which service is unhealthy?)
 
-**TimescaleDB slow or unhealthy:** Common root cause for cascading failures. Event Store can't connect → API can't start. Run `just health-wait 180` and retry before digging deeper.
+**TimescaleDB slow or unhealthy:** Common root cause for cascading failures. Event Store can't connect, so the API can't start. Run `just health-wait 180` and retry before digging deeper.
 
-**Workspace build fails:** Check disk space, check `lib/agentic-primitives` submodule status, then `just workspace-build`. Apple Silicon: Rust build takes 5-10 min — don't interrupt it.
+**Workspace build fails:** Check disk space, check `lib/agentic-primitives` submodule status, then `just workspace-build`. Apple Silicon: Rust build takes 5-10 min, so don't interrupt it.
 
-**Webhooks not arriving:** Check `grep DEV__SMEE_URL .env` — if empty, you're using Cloudflare. Check Cloudflare tunnel status in Zero Trust dashboard. Dev: `just dev-webhooks-logs`.
+**Webhooks not arriving:** Check `grep DEV__SMEE_URL .env`; if empty, you're using Cloudflare. Check Cloudflare tunnel status in Zero Trust dashboard. Dev: `just dev-webhooks-logs`.
 
 **1Password not resolving:** Check `INCLUDE_OP_CLI=1` in `infra/.env`, then `op vault list` to confirm `syn137-dev` vault exists.
 

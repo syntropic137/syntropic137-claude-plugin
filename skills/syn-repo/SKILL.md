@@ -1,11 +1,11 @@
 ---
 name: syn-repo
-description: Manage Syntropic137 organizations, systems, and registered repositories — the hierarchy for cost rollup, health monitoring, and repo registration
+description: Manage Syntropic137 organizations, systems, and registered repositories; the hierarchy for cost rollup, health monitoring, and repo registration
 argument-hint: <list|overview|github> [org|system|repo] [args]
 model: sonnet
 ---
 
-# /syn-repo — Organizations, Systems, and Repos
+# /syn-repo: Organizations, Systems, and Repos
 
 Use this skill when you need to see the org/system/repo hierarchy, check which repos are registered, or view the platform-wide cost and health overview.
 
@@ -21,7 +21,7 @@ For **creating and managing** the org/system/repo structure, the organization sk
 Organization → System → Repo
 ```
 
-This grouping exists so you can roll up costs and health by team or product area. A repo not assigned to a system still works — it just won't appear in system-level cost rollups.
+This grouping exists so you can roll up costs and health by team or product area. A repo not assigned to a system still works; it just won't appear in system-level cost rollups.
 
 Repos are **auto-registered** when the GitHub App fires its first webhook on that repo. You don't need to manually register them.
 
@@ -49,12 +49,12 @@ API URL resolves from `SYN_API_URL` → `SYN_PUBLIC_HOSTNAME` in `~/.syntropic13
 ## Common Scenarios
 
 **"I installed the GitHub App on a repo but it's not showing up."**
-1. `syn github repos` — confirms what the App can see
-2. If the repo appears here but not in `curl /api/v1/repos`, trigger a webhook event (push a commit) — registration fires on the first event
+1. `syn github repos` to confirm what the App can see
+2. If the repo appears here but not in `curl /api/v1/repos`, trigger a webhook event (push a commit); registration fires on the first event
 3. If the repo doesn't appear in `syn github repos`, the App may not be installed: `npx @syntropic137/setup github-app`
 
 **"I want a cross-org cost and health summary."**
-`syn insights overview` or `curl http://localhost:8137/api/v1/organizations/overview` — shows all systems, their health status, and total cost.
+`syn insights overview` or `curl http://localhost:8137/api/v1/organizations/overview` shows all systems, their health status, and total cost.
 
 **"I want to check costs for one system."**
 This is in the organization skill: `syn system cost <system-id>` and `syn system status <system-id>`.

@@ -1,11 +1,11 @@
 ---
 name: syn-insights
-description: Query Syntropic137 observability data — sessions, artifacts, token costs, tool timelines, and system-wide insights
+description: Query Syntropic137 observability data; sessions, artifacts, token costs, tool timelines, and system-wide insights
 argument-hint: <overview|sessions|artifacts|costs|tools|tokens> [args]
 model: sonnet
 ---
 
-# /syn-insights — Observability
+# /syn-insights: Observability
 
 Use this skill when you need to answer two questions: **"Why was this execution expensive?"** and **"Why did this session fail?"** These are the questions observability data exists to answer.
 
@@ -45,11 +45,11 @@ syn insights costs session <session-id>         # cost breakdown for one session
 syn insights costs execution <execution-id>     # cost aggregated across all phases
 ```
 
-The breakdown includes `cost_by_model` and `cost_by_tool` — these tell you whether opus usage or expensive tool calls (like `Bash`) drove the cost.
+The breakdown includes `cost_by_model` and `cost_by_tool`; these tell you whether opus usage or expensive tool calls (like `Bash`) drove the cost.
 
 ## Tool Call Timeline
 
-The most useful debug view — every tool call in order with timing and success/failure:
+The most useful debug view, showing every tool call in order with timing and success/failure:
 
 ```bash
 syn insights tools <session-id>
@@ -66,21 +66,21 @@ Per-session token breakdown including cache hit/miss:
 syn insights tokens <session-id>
 ```
 
-Low `cache_read_tokens` relative to input volume means the agent is re-reading large files every turn — expensive and slow.
+Low `cache_read_tokens` relative to input volume means the agent is re-reading large files every turn, which is expensive and slow.
 
 ## Common Scenarios
 
-**"This execution cost $12 — what happened?"**
-1. `syn insights costs execution <id>` — which phase was most expensive?
-2. `syn insights costs session <session-id>` for the expensive phase — check `cost_by_model` and `cost_by_tool`
-3. `syn insights tokens <session-id>` — check cache hit ratio
+**"This execution cost $12. What happened?"**
+1. `syn insights costs execution <id>` to find which phase was most expensive
+2. `syn insights costs session <session-id>` for the expensive phase: check `cost_by_model` and `cost_by_tool`
+3. `syn insights tokens <session-id>` to check cache hit ratio
 
-**"The workflow produced no artifacts — what did the agent do?"**
-1. `syn insights sessions --workflow <id>` — find the session IDs
-2. `syn insights tools <session-id>` — trace every tool call; look for errors or blocked tools
+**"The workflow produced no artifacts. What did the agent do?"**
+1. `syn insights sessions --workflow <id>` to find the session IDs
+2. `syn insights tools <session-id>` to trace every tool call; look for errors or blocked tools
 
 **"I want to see all sessions from the last run."**
-`syn insights sessions --workflow <workflow-id>` — lists all sessions in order, most recent first.
+`syn insights sessions --workflow <workflow-id>` lists all sessions in order, most recent first.
 
 ## Platform Overview
 
