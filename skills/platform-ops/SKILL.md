@@ -1,17 +1,17 @@
 ---
 name: platform-ops
-description: Syntropic137 infrastructure operations — service map, Docker stack, workspace lifecycle, Envoy token injection security, QA/testing commands, and troubleshooting recipes
+description: Syntropic137 infrastructure operations; service map, Docker stack, workspace lifecycle, Envoy token injection security, QA/testing commands, and troubleshooting recipes
 ---
 
-# Platform Operations — Syntropic137
+# Platform Operations: Syntropic137
 
-When something is broken at the infrastructure level — a service is down, a workspace won't build, API calls are failing — this is the reference for diagnosing and fixing it. **Start with `just health-check` before reading logs.** It pinpoints the failing service in seconds and saves you from grepping through megabytes of log output.
+When something is broken at the infrastructure level (a service is down, a workspace won't build, API calls are failing), this is the reference for diagnosing and fixing it. **Start with `just health-check` before reading logs.** It pinpoints the failing service in seconds and saves you from grepping through megabytes of log output.
 
 ## When to Use This Skill
 
 Use this when you are: diagnosing a service that won't start, understanding the security model for agent token injection, running QA, operating the selfhost stack, or navigating the project structure.
 
-Not needed for first-time setup — use the setup skill for that. Not needed for session costs or observability data — use the observability skill.
+Not needed for first-time setup; use the setup skill for that. Not needed for session costs or observability data; use the observability skill.
 
 ## Architecture at a Glance
 
@@ -19,13 +19,13 @@ Syntropic137 has two core capabilities:
 - **Orchestration**: workspace lifecycle, GitHub App, secure token handling via Envoy proxy
 - **Observability**: every tool call, token count, and cost streamed to a real-time dashboard
 
-The platform is split into two lanes: **Domain State** (event-sourced aggregates — `aggregates decide, handlers execute`) and **Telemetry** (append-only time-series data). Both feed the same API but are queried differently.
+The platform is split into two lanes: **Domain State** (event-sourced aggregates, where `aggregates decide, handlers execute`) and **Telemetry** (append-only time-series data). Both feed the same API but are queried differently.
 
 ## Service Map
 
 | Service | Port | Role |
 |---------|------|------|
-| `syn-api` | 8137 | FastAPI HTTP — all routes and application services |
+| `syn-api` | 8137 | FastAPI HTTP: all routes and application services |
 | `syn-collector` | 8080 | Event ingestion from agents |
 | Event Store | 50051 | Rust gRPC event store |
 | TimescaleDB | 5432 | PostgreSQL + time-series (projections + telemetry) |
@@ -74,9 +74,9 @@ Each workflow phase gets its own isolated workspace. Rebuild the image when tool
 ## Troubleshooting Recipes
 
 **API not responding:**
-1. `just health-check` — identify which service is down
-2. `docker compose ps` — check if containers are actually running
-3. `just dev-logs` — look for startup errors
+1. `just health-check` to identify which service is down
+2. `docker compose ps` to check if containers are actually running
+3. `just dev-logs` to look for startup errors
 4. Check if TimescaleDB finished starting before the API tried to connect
 
 **Event Store not connecting:**
@@ -86,7 +86,7 @@ Event Store (port 50051) is a Rust gRPC service that depends on TimescaleDB. If 
 Agents fail with missing tools or old Claude CLI version. Fix: `just workspace-build`. On Apple Silicon, allow 5-10 min for the Rust components.
 
 **Database issues:**
-`just dev-stop && just dev` for soft restart. If tables are corrupted: `just dev-down` destroys volumes — you'll lose local data.
+`just dev-stop && just dev` for soft restart. If tables are corrupted: `just dev-down` destroys volumes and you'll lose local data.
 
 **Dashboard not loading:**
 `just dashboard-install` then `just dashboard-frontend`. Dashboard requires the API to be healthy on port 8137.

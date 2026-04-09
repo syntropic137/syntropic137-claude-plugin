@@ -1,11 +1,11 @@
 ---
 name: workflow-management
-description: Create, configure, and manage Syntropic137 workflow templates — phase definitions, agent config, YAML schema, $ARGUMENTS substitution, input declarations, and design patterns like RIPER-5
+description: Create, configure, and manage Syntropic137 workflow templates (phase definitions, agent config, YAML schema, $ARGUMENTS substitution, input declarations, and design patterns like RIPER-5)
 ---
 
-# Workflow Management — Syntropic137
+# Workflow Management: Syntropic137
 
-When you need to build a new automated workflow — or understand why an existing one behaves unexpectedly — start here. Workflows are the core unit of work: YAML-defined multi-phase agent pipelines that run in isolated Docker workspaces.
+When you need to build a new automated workflow, or understand why an existing one behaves unexpectedly, start here. Workflows are the core unit of work: YAML-defined multi-phase agent pipelines that run in isolated Docker workspaces.
 
 **NEVER hardcode task descriptions or repository names into phase prompts.** Use `$ARGUMENTS` for the task and `{{repository}}` in the URL so the same template works for any repo and any task.
 
@@ -13,15 +13,15 @@ When you need to build a new automated workflow — or understand why an existin
 
 Use this when you are: designing a new workflow template, debugging unexpected phase behavior, choosing the right design pattern (RIPER-5 vs lighter options), or understanding the input/output wiring between phases.
 
-Not needed when you just want to **run** an existing workflow — use the execution-control skill instead. Not needed when you want to list or inspect already-registered workflows — use `/syn-workflow` for that.
+Not needed when you just want to **run** an existing workflow; use the execution-control skill instead. Not needed when you want to list or inspect already-registered workflows; use `/syn-workflow` for that.
 
 ## The Core Model: Templates vs Executions
 
-A **workflow template** is a reusable definition — like a class. A **workflow execution** is a running instance — like an object. One template can have many concurrent executions with different tasks, repos, and inputs.
+A **workflow template** is a reusable definition (like a class). A **workflow execution** is a running instance (like an object). One template can have many concurrent executions with different tasks, repos, and inputs.
 
-Templates define **phases** — each phase is one Claude CLI invocation in its own workspace. Phases run sequentially by default; outputs from phase N feed into phase N+1 via `{{phase-id}}` substitution.
+Templates define **phases**: each phase is one Claude CLI invocation in its own workspace. Phases run sequentially by default; outputs from phase N feed into phase N+1 via `{{phase-id}}` substitution.
 
-## Designing a Workflow — 4 Phases
+## Designing a Workflow: 4 Phases
 
 ### 1. Choose the right pattern
 
@@ -29,12 +29,12 @@ Pick based on complexity:
 
 | Pattern | Phases | Use When |
 |---------|--------|----------|
-| **RIPER-5** | 5 | Feature development, complex bug fixes — full Research→Innovate→Plan→Execute→Review loop |
+| **RIPER-5** | 5 | Feature development, complex bug fixes: full Research→Innovate→Plan→Execute→Review loop |
 | **Research→Analyze→Synthesize** | 3 | Investigation work, architectural questions |
-| **Parallel Analysis** | 2 | Broad codebase surveys — frontend/backend/infra simultaneously |
+| **Parallel Analysis** | 2 | Broad codebase surveys: frontend/backend/infra simultaneously |
 | **Human-in-the-Loop** | 3+ | Any workflow requiring approval before execution |
 
-RIPER-5 is the recommended default for implementation work. It has a `HUMAN_IN_LOOP` gate at the Plan phase — the agent pauses and waits for your approval before writing any code.
+RIPER-5 is the recommended default for implementation work. It has a `HUMAN_IN_LOOP` gate at the Plan phase: the agent pauses and waits for your approval before writing any code.
 
 ### 2. Define your input declarations
 
@@ -56,9 +56,9 @@ input_declarations:
 ### 3. Wire phases with substitution
 
 Each phase's `prompt_template` can reference:
-- `$ARGUMENTS` — the task description
-- `{{variable}}` — a declared input value
-- `{{phase-id}}` — the output artifact from a previous phase
+- `$ARGUMENTS`: the task description
+- `{{variable}}`: a declared input value
+- `{{phase-id}}`: the output artifact from a previous phase
 
 Phase outputs chain forward automatically. Keep the substitution chain explicit: if phase 3 needs phase 1's output, reference `{{phase-1-id}}` directly rather than relying on phase 2 to pass it through.
 
@@ -66,9 +66,9 @@ Phase outputs chain forward automatically. Keep the substitution chain explicit:
 
 Use cheaper models for read-only, exploratory phases; use more capable models where reasoning depth matters:
 
-- **haiku** — reading files, formatting output, simple classification
-- **sonnet** — most phases, balanced cost/capability
-- **opus** — complex implementation, architecture decisions, deep analysis
+- **haiku**: reading files, formatting output, simple classification
+- **sonnet**: most phases, balanced cost/capability
+- **opus**: complex implementation, architecture decisions, deep analysis
 
 A well-designed RIPER-5 workflow might use sonnet for Research, opus for Innovate and Plan, opus for Execute, sonnet for Review.
 
@@ -97,11 +97,11 @@ See `workflow-management` skill for full YAML schema reference including `allowe
 
 ## Escalation Point
 
-If a workflow design isn't working as expected after two attempts — phases not receiving outputs, models ignoring injected context — **stop and inspect the execution detail** before redesigning. Run `syn control status <exec-id>` and check each phase's `artifact_id`. The artifact content will tell you exactly what was passed forward.
+If a workflow design isn't working as expected after two attempts (phases not receiving outputs, models ignoring injected context), **stop and inspect the execution detail** before redesigning. Run `syn control status <exec-id>` and check each phase's `artifact_id`. The artifact content will tell you exactly what was passed forward.
 
 ## Integration
 
-Design here → run with execution-control → monitor with observability. Install community workflows via the marketplace skill instead of building from scratch.
+Design here, run with execution-control, then monitor with observability. Install community workflows via the marketplace skill instead of building from scratch.
 
 ## CLI Quick Reference
 

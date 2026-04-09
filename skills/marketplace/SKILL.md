@@ -1,9 +1,9 @@
 ---
 name: marketplace
-description: Search, install, and manage Syntropic137 workflow plugins from marketplace registries — browse available workflows, review before installing, manage registry sources
+description: Search, install, and manage Syntropic137 workflow plugins from marketplace registries; browse available workflows, review before installing, manage registry sources
 ---
 
-# Marketplace — Syntropic137
+# Marketplace: Syntropic137
 
 Use this knowledge when the user wants to browse, install, or manage workflow plugins from marketplace registries, or set up a new marketplace source.
 
@@ -83,8 +83,8 @@ syn workflow uninstall code-review
 
 ### After Installing
 
-- Verify with `syn workflow list` — installed workflows appear
-- Trigger definitions in plugins are **examples only** — they show which GitHub events and conditions are relevant, but users set up triggers manually with `syn triggers register`
+- Verify with `syn workflow list` to confirm installed workflows appear
+- Trigger definitions in plugins are **examples only**: they show which GitHub events and conditions are relevant, but users set up triggers manually with `syn triggers register`
 - Run a workflow: `syn workflow run <workflow-id> --input key=value`
 
 ## Validation
@@ -99,11 +99,11 @@ syn workflow validate ./path/to/workflow.yaml
 
 Before installing plugins from third-party marketplaces:
 
-- **Review the source** — plugins contain phase prompts that instruct agents. Check for suspicious patterns in `phases/*.md` files
-- **Check tool access** — review `allowed_tools` declarations in workflow definitions. Be cautious of plugins requesting broad tool access (especially `edit` and `bash`) without clear justification
-- **Use the security-reviewer agent** — ask Claude to review a marketplace or plugin for security before installing
+- **Review the source**: plugins contain phase prompts that instruct agents. Check for suspicious patterns in `phases/*.md` files
+- **Check tool access**: review `allowed_tools` declarations in workflow definitions. Be cautious of plugins requesting broad tool access (especially `edit` and `bash`) without clear justification
+- **Use the security-reviewer agent**: ask Claude to review a marketplace or plugin for security before installing
 
-Plugins execute with the same permissions as any workflow on your platform. Treat third-party plugins like any other code dependency — review before installing.
+Plugins execute with the same permissions as any workflow on your platform. Treat third-party plugins like any other code dependency: review before installing.
 
 ## The Default Marketplace
 
@@ -112,7 +112,7 @@ The official Syntropic137 marketplace (`syntropic137/syntropic137-marketplace`) 
 | Plugin | Workflows | Description |
 |--------|-----------|-------------|
 | `code-review` | 1 | AI-powered PR code review |
-| `sdlc-trunk` | 3 | Full trunk-based dev lifecycle — PR review, CI self-healing, release prep |
+| `sdlc-trunk` | 3 | Full trunk-based dev lifecycle: PR review, CI self-healing, release prep |
 
 ### Quick Start
 

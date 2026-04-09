@@ -1,11 +1,11 @@
 ---
 name: syn-triggers
-description: Manage Syntropic137 GitHub webhook trigger rules — list, register, enable, pause, and delete triggers that fire workflows on GitHub events
+description: Manage Syntropic137 GitHub webhook trigger rules; list, register, enable, pause, and delete triggers that fire workflows on GitHub events
 argument-hint: <list|register|enable|pause|delete> [args]
 model: sonnet
 ---
 
-# /syn-triggers — Webhook Trigger Management
+# /syn-triggers: Webhook Trigger Management
 
 Use this skill when you need to create, view, or manage the trigger rules that automatically fire Syntropic137 workflows on GitHub events.
 
@@ -13,7 +13,7 @@ Use this skill when you need to create, view, or manage the trigger rules that a
 
 Use `/syn-triggers` when you want to: see what triggers are active on a repo, register a new trigger, pause a noisy trigger, check why a trigger didn't fire, or delete a rule you no longer need.
 
-For the **full setup story** — GitHub App installation, webhook delivery via Cloudflare, input mapping from payload fields, and safety limit design — the github-automation skill has the complete picture.
+For the **full setup story** (GitHub App installation, webhook delivery via Cloudflare, input mapping from payload fields, and safety limit design), the github-automation skill has the complete picture.
 
 ## The Trigger Rule Pattern
 
@@ -58,16 +58,16 @@ Supported events: `push`, `pull_request`, `issues`, `issue_comment`, `check_run`
 2. Register: `syn triggers register --name "pr-review" --event pull_request --repository owner/repo --workflow <id> --condition action=opened --budget 2.00 --cooldown 300`
 3. Verify: `syn triggers list --repository owner/repo`
 
-**"My trigger didn't fire — what happened?"**
-`syn triggers history <trigger-id>` — blocked entries show the exact guard and reason:
-- `concurrency` — execution already running for same trigger + PR
-- `max_attempts` — that PR already hit the fire limit
-- `cooldown` — fired too recently
-- `daily_limit` — daily cap reached
-- `conditions_not_met` — payload didn't match conditions
+**"My trigger didn't fire. What happened?"**
+`syn triggers history <trigger-id>` shows blocked entries with the exact guard and reason:
+- `concurrency`: execution already running for same trigger + PR
+- `max_attempts`: that PR already hit the fire limit
+- `cooldown`: fired too recently
+- `daily_limit`: daily cap reached
+- `conditions_not_met`: payload didn't match conditions
 
 **"A trigger is firing too often and I need to stop it temporarily."**
-`syn triggers pause <id> --reason "too noisy"` — stops firing without deleting the rule. Resume later with `syn triggers resume <id>`.
+`syn triggers pause <id> --reason "too noisy"` stops firing without deleting the rule. Resume later with `syn triggers resume <id>`.
 
 ## Delete a Trigger
 

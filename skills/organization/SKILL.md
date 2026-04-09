@@ -3,17 +3,17 @@ name: organization
 description: Manage the Syntropic137 Organization→System→Repo hierarchy for cost rollup, health monitoring, and contribution tracking
 ---
 
-# Organization Management — Syntropic137
+# Organization Management: Syntropic137
 
 When you need to understand where your AI engineering spend is going, or which systems are healthy vs degraded, the organization hierarchy is the structure that makes that possible. Without it, costs and health metrics are a flat list with no grouping.
 
-**NEVER assign a repo to a system without first checking if it's already assigned.** A repo can only belong to one system — assigning without unassigning first will fail silently in some CLI versions.
+**NEVER assign a repo to a system without first checking if it's already assigned.** A repo can only belong to one system; assigning without unassigning first will fail silently in some CLI versions.
 
 ## When to Use This Skill
 
 Use this when you are: setting up the org/system/repo structure for the first time, tracking costs across a group of related repos, checking system health, or reorganizing repos between systems.
 
-Not needed for listing registered repos quickly — use `/syn-repo` for that. Not needed for GitHub App installation — use the github-automation skill.
+Not needed for listing registered repos quickly; use `/syn-repo` for that. Not needed for GitHub App installation; use the github-automation skill.
 
 ## The Hierarchy and Why It Exists
 
@@ -24,13 +24,13 @@ Organization  (e.g., "Syntropic137")
 ```
 
 This structure exists for three reasons:
-1. **Cost rollup** — see total AI spend per system, not just per session
-2. **Health monitoring** — system-level health aggregates across all its repos (healthy / degraded / failing)
-3. **Contribution heatmaps** — team activity patterns across repos, grouped by system
+1. **Cost rollup**: see total AI spend per system, not just per session
+2. **Health monitoring**: system-level health aggregates across all its repos (healthy / degraded / failing)
+3. **Contribution heatmaps**: team activity patterns across repos, grouped by system
 
 If you're a solo developer on one project, you may only need one org + one system + one repo. The structure scales to large engineering orgs with dozens of repos.
 
-## Setting Up the Hierarchy — 3 Steps
+## Setting Up the Hierarchy: 3 Steps
 
 **Step 1: Create an organization.**
 ```bash
@@ -44,7 +44,7 @@ syn system create --organization <org-id> --name "Backend" --description "API an
 syn system create --organization <org-id> --name "Frontend" --description "React apps"
 ```
 
-**Step 3: Assign repos to systems.** Repos are auto-registered when the GitHub App fires — you just assign them:
+**Step 3: Assign repos to systems.** Repos are auto-registered when the GitHub App fires; you just assign them:
 ```bash
 syn repo assign <repo-id> --system <system-id>
 ```
@@ -96,11 +96,11 @@ Don't create systems just to satisfy the hierarchy. If you're not actively using
 
 ## Escalation Point
 
-If a repo isn't showing up in `syn repo list` after GitHub App installation, check trigger history and App installation status before manually registering. The App fires a `RepoRegisteredEvent` on first webhook — if no events have come in, the App may not be installed on that repo yet.
+If a repo isn't showing up in `syn repo list` after GitHub App installation, check trigger history and App installation status before manually registering. The App fires a `RepoRegisteredEvent` on first webhook; if no events have come in, the App may not be installed on that repo yet.
 
 ## Integration
 
-Set up organization hierarchy before configuring trigger rules in github-automation — the system/repo structure is needed for cost attribution in trigger-fired executions. Query costs and health via `/syn-repo` from Claude Code.
+Set up organization hierarchy before configuring trigger rules in github-automation; the system/repo structure is needed for cost attribution in trigger-fired executions. Query costs and health via `/syn-repo` from Claude Code.
 
 ## CLI Quick Reference
 
