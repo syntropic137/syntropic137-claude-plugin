@@ -62,8 +62,9 @@ syn workflow install github.com/yourorg/your-plugin
 # Install from a local directory (for development)
 syn workflow install ./path/to/plugin
 
-# List installed plugins
-syn workflow installed
+# List workflow packages pulled from the marketplace (local CLI history)
+# Use 'syn workflow list' to see what is currently on the running stack
+syn workflow packages
 
 # Update an installed plugin
 syn workflow update code-review
@@ -142,7 +143,11 @@ syn workflow list    # Verify: 4 workflows created
 ### "What plugins do I have installed?"
 
 ```bash
-syn workflow installed
+# Shows local CLI history of packages pulled from the marketplace
+syn workflow packages
+
+# To see what is currently installed on the running stack:
+syn workflow list
 ```
 
 ### "Remove a plugin I no longer need"
