@@ -10,21 +10,28 @@ model: sonnet
 Active triggers: !`syn triggers list 2>/dev/null || echo "(syn not found — run: npx @syntropic137/setup cli)"`
 
 ```bash
-SUBCOMMAND=$(echo "$ARGUMENTS" | awk '{print $1}')
-ARGS=$(echo "$ARGUMENTS" | cut -d' ' -f2-)
+PARSED_ARGS=()
+while IFS= read -r arg; do
+  PARSED_ARGS+=("$arg")
+done < <(
+  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
+)
+
+SUBCOMMAND="${PARSED_ARGS[0]:-}"
+ARGS=("${PARSED_ARGS[@]:1}")
 
 case "$SUBCOMMAND" in
   list)
-    syn triggers list $ARGS
+    syn triggers list "${ARGS[@]}"
     ;;
   register)
-    syn triggers register $ARGS
+    syn triggers register "${ARGS[@]}"
     ;;
   enable)
-    syn triggers enable $ARGS
+    syn triggers enable "${ARGS[@]}"
     ;;
   pause)
-    syn triggers pause $ARGS
+    syn triggers pause "${ARGS[@]}"
     ;;
   delete)
     # Resolve API URL for delete (not in Node CLI)
@@ -35,9 +42,18 @@ case "$SUBCOMMAND" in
       _url="${_hostname:+https://$_hostname}"
     fi
     _url="${_url:-http://localhost:8137}"
-    TRIGGER_ID=$(echo "$ARGS" | awk '{print $1}')
-    curl -sf -X DELETE "$_url/api/v1/triggers/$TRIGGER_ID"
-    echo "Trigger $TRIGGER_ID deleted."
+    TRIGGER_ID="${ARGS[0]:-}"
+    if [ -z "$TRIGGER_ID" ]; then
+      echo "Error: delete requires a trigger ID." >&2
+      echo "Usage: /syn-triggers delete <id>" >&2
+      exit 1
+    fi
+    if curl -sf -X DELETE "$_url/api/v1/triggers/$TRIGGER_ID"; then
+      echo "Trigger $TRIGGER_ID deleted."
+    else
+      echo "Error: failed to delete trigger $TRIGGER_ID. Run /syn-health to diagnose." >&2
+      exit 1
+    fi
     ;;
   ""|help)
     echo "Usage: /syn-triggers <subcommand> [args]"

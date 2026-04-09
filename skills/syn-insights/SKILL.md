@@ -8,6 +8,8 @@ model: sonnet
 ---
 
 ```bash
+set -o pipefail
+
 # Resolve API URL
 if [ -n "${SYN_API_URL:-}" ]; then
   _url="$SYN_API_URL"
@@ -17,77 +19,104 @@ elif [ -f "$HOME/.syntropic137/.env" ]; then
 fi
 _url="${_url:-http://localhost:8137}"
 
-_json() { python3 -m json.tool 2>/dev/null || cat; }
+_curl_json() {
+  local url="$1"
+  local response
+  if response=$(curl -sf "$url"); then
+    printf '%s\n' "$response" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$response"
+  else
+    echo "Error: API unreachable at $url. Run /syn-health to diagnose." >&2
+    exit 1
+  fi
+}
 
-SUBCOMMAND=$(echo "$ARGUMENTS" | awk '{print $1}')
-ARGS=$(echo "$ARGUMENTS" | cut -d' ' -f2-)
+_flag_value() {
+  # Extract value of --flag from argument list: _flag_value "--flag" "$@"
+  local flag="$1"; shift
+  local prev=""
+  for arg in "$@"; do
+    if [ "$prev" = "$flag" ]; then printf '%s' "$arg"; return; fi
+    prev="$arg"
+  done
+}
+
+PARSED_ARGS=()
+while IFS= read -r arg; do
+  PARSED_ARGS+=("$arg")
+done < <(
+  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
+)
+
+SUBCOMMAND="${PARSED_ARGS[0]:-}"
+ARGS=("${PARSED_ARGS[@]:1}")
 
 case "$SUBCOMMAND" in
   overview)
     echo "=== Platform Overview ==="
-    curl -sf "$_url/api/v1/organizations/overview" | _json
+    _curl_json "$_url/api/v1/organizations/overview"
     ;;
   sessions)
-    SESSION_ID=$(echo "$ARGS" | awk '{print $1}')
-    WF_FILTER=$(echo "$ARGS" | grep -oP '(?<=--workflow )\S+' || true)
-    STATUS_FILTER=$(echo "$ARGS" | grep -oP '(?<=--status )\S+' || true)
+    SESSION_ID="${ARGS[0]:-}"
+    WF_FILTER=$(_flag_value "--workflow" "${ARGS[@]}")
+    STATUS_FILTER=$(_flag_value "--status" "${ARGS[@]}")
     if [ -n "$SESSION_ID" ] && [[ "$SESSION_ID" != --* ]]; then
-      curl -sf "$_url/api/v1/sessions/$SESSION_ID" | _json
-    elif [ -n "$WF_FILTER" ]; then
-      curl -sf "$_url/api/v1/sessions?workflow_id=$WF_FILTER" | _json
-    elif [ -n "$STATUS_FILTER" ]; then
-      curl -sf "$_url/api/v1/sessions?status=$STATUS_FILTER" | _json
+      _curl_json "$_url/api/v1/sessions/$SESSION_ID"
     else
-      curl -sf "$_url/api/v1/sessions" | _json
+      QUERY=""
+      [ -n "$WF_FILTER" ]     && QUERY="workflow_id=$WF_FILTER"
+      [ -n "$STATUS_FILTER" ] && QUERY="${QUERY}${QUERY:+&}status=$STATUS_FILTER"
+      _curl_json "$_url/api/v1/sessions${QUERY:+?$QUERY}"
     fi
     ;;
   artifacts)
-    WF_FILTER=$(echo "$ARGS" | grep -oP '(?<=--workflow )\S+' || true)
-    ART_ID=$(echo "$ARGS" | awk '{print $1}')
-    RAW=$(echo "$ARGS" | grep -q '\-\-raw' && echo "1" || echo "")
+    WF_FILTER=$(_flag_value "--workflow" "${ARGS[@]}")
+    ART_ID="${ARGS[0]:-}"
+    RAW=false
+    for arg in "${ARGS[@]}"; do [ "$arg" = "--raw" ] && RAW=true; done
     if [ -n "$ART_ID" ] && [[ "$ART_ID" != --* ]]; then
-      if [ -n "$RAW" ]; then
-        syn artifacts content $ART_ID --raw
+      if [ "$RAW" = true ]; then
+        syn artifacts content "$ART_ID" --raw
       else
-        syn artifacts show $ART_ID
+        syn artifacts show "$ART_ID"
       fi
     elif [ -n "$WF_FILTER" ]; then
-      syn artifacts list --workflow $WF_FILTER
+      syn artifacts list --workflow "$WF_FILTER"
     else
       syn artifacts list
     fi
     ;;
   costs)
-    COST_TARGET=$(echo "$ARGS" | awk '{print $1}')
-    COST_ID=$(echo "$ARGS" | awk '{print $2}')
+    COST_TARGET="${ARGS[0]:-}"
+    COST_ID="${ARGS[1]:-}"
     case "$COST_TARGET" in
       session)
-        curl -sf "$_url/api/v1/costs/sessions/$COST_ID" | _json
+        _curl_json "$_url/api/v1/costs/sessions/$COST_ID"
         ;;
       workflow|execution)
-        curl -sf "$_url/api/v1/costs/executions/$COST_ID" | _json
+        _curl_json "$_url/api/v1/costs/executions/$COST_ID"
         ;;
       *)
-        curl -sf "$_url/api/v1/costs/summary" | _json
+        _curl_json "$_url/api/v1/costs/summary"
         ;;
     esac
     ;;
   tools)
-    SESSION_ID=$(echo "$ARGS" | awk '{print $1}')
-    LIMIT=$(echo "$ARGS" | grep -oP '(?<=--limit )\S+' || echo "100")
+    SESSION_ID="${ARGS[0]:-}"
+    LIMIT=$(_flag_value "--limit" "${ARGS[@]}")
+    LIMIT="${LIMIT:-100}"
     if [ -z "$SESSION_ID" ] || [[ "$SESSION_ID" == --* ]]; then
-      echo "Usage: /syn-insights tools <session-id> [--limit N]"
-    else
-      curl -sf "$_url/api/v1/events/sessions/$SESSION_ID/tools?limit=$LIMIT" | _json
+      echo "Usage: /syn-insights tools <session-id> [--limit N]" >&2
+      exit 1
     fi
+    _curl_json "$_url/api/v1/events/sessions/$SESSION_ID/tools?limit=$LIMIT"
     ;;
   tokens)
-    SESSION_ID=$(echo "$ARGS" | awk '{print $1}')
+    SESSION_ID="${ARGS[0]:-}"
     if [ -z "$SESSION_ID" ] || [[ "$SESSION_ID" == --* ]]; then
-      echo "Usage: /syn-insights tokens <session-id>"
-    else
-      curl -sf "$_url/api/v1/events/sessions/$SESSION_ID/tokens" | _json
+      echo "Usage: /syn-insights tokens <session-id>" >&2
+      exit 1
     fi
+    _curl_json "$_url/api/v1/events/sessions/$SESSION_ID/tokens"
     ;;
   ""|help)
     echo "Usage: /syn-insights <subcommand> [args]"
@@ -97,6 +126,8 @@ case "$SUBCOMMAND" in
     echo "  sessions [session-id]          List sessions or show session detail"
     echo "  sessions --workflow <id>       Sessions for a specific workflow"
     echo "  sessions --status <status>     Filter by status (running/completed/failed)"
+    echo "  sessions --workflow <id> --status <status>"
+    echo "                                 Combine both filters"
     echo "  artifacts [artifact-id]        List artifacts or show artifact detail"
     echo "  artifacts --workflow <id>      Artifacts for a specific workflow"
     echo "  artifacts <id> --raw           Show raw artifact content"
@@ -109,6 +140,7 @@ case "$SUBCOMMAND" in
     echo "  /syn-insights overview"
     echo "  /syn-insights sessions"
     echo "  /syn-insights sessions sess-abc123"
+    echo "  /syn-insights sessions --workflow wf-abc123 --status completed"
     echo "  /syn-insights artifacts --workflow wf-abc123"
     echo "  /syn-insights costs"
     echo "  /syn-insights costs session sess-abc123"

@@ -7,13 +7,18 @@ allowed-tools: Bash
 model: sonnet
 ---
 
-Running executions: !`syn control status 2>/dev/null || (syn workflow list 2>/dev/null | head -5) || echo "(syn not found — run: npx @syntropic137/setup cli)"`
-
 ```bash
-SUBCOMMAND=$(echo "$ARGUMENTS" | awk '{print $1}')
-ARGS=$(echo "$ARGUMENTS" | cut -d' ' -f2-)
+PARSED_ARGS=()
+while IFS= read -r arg; do
+  PARSED_ARGS+=("$arg")
+done < <(
+  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
+)
 
-# Resolve API URL for list endpoint (not in Node CLI)
+SUBCOMMAND="${PARSED_ARGS[0]:-}"
+ARGS=("${PARSED_ARGS[@]:1}")
+
+# Resolve API URL for list/status endpoints (not in Node CLI)
 if [ -n "${SYN_API_URL:-}" ]; then
   _url="$SYN_API_URL"
 elif [ -f "$HOME/.syntropic137/.env" ]; then
@@ -22,31 +27,42 @@ elif [ -f "$HOME/.syntropic137/.env" ]; then
 fi
 _url="${_url:-http://localhost:8137}"
 
+_curl_json() {
+  local url="$1"
+  local response
+  if response=$(curl -sf "$url"); then
+    printf '%s\n' "$response" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$response"
+  else
+    echo "Error: API unreachable at $url. Run /syn-health to diagnose." >&2
+    exit 1
+  fi
+}
+
 case "$SUBCOMMAND" in
   list)
-    STATUS_FILTER=$(echo "$ARGS" | grep -oP '(?<=--status )\S+' || true)
+    STATUS_FILTER=$(printf '%s\n' "${ARGS[@]}" | awk '{for (i=1; i<=NF; i++) if ($i=="--status" && i<NF) { print $(i+1); exit }}')
     if [ -n "$STATUS_FILTER" ]; then
-      curl -sf "$_url/api/v1/executions?status=$STATUS_FILTER" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/executions?status=$STATUS_FILTER"
+      _curl_json "$_url/api/v1/executions?status=$STATUS_FILTER"
     else
-      curl -sf "$_url/api/v1/executions" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/executions"
+      _curl_json "$_url/api/v1/executions"
     fi
     ;;
   status)
-    EXEC_ID=$(echo "$ARGS" | awk '{print $1}')
+    EXEC_ID="${ARGS[0]:-}"
     if [ -z "$EXEC_ID" ]; then
-      curl -sf "$_url/api/v1/executions" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/executions"
+      _curl_json "$_url/api/v1/executions"
     else
-      syn control status $EXEC_ID
+      syn control status "$EXEC_ID"
     fi
     ;;
   pause)
-    syn control pause $ARGS
+    syn control pause "${ARGS[@]}"
     ;;
   resume)
-    syn control resume $ARGS
+    syn control resume "${ARGS[@]}"
     ;;
   cancel)
-    syn control cancel $ARGS
+    syn control cancel "${ARGS[@]}"
     ;;
   ""|help)
     echo "Usage: /syn-control <subcommand> [args]"

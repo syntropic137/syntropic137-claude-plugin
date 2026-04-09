@@ -1,13 +1,24 @@
 ---
 name: syn-repo
 description: Manage Syntropic137 organizations, systems, and registered repositories — the hierarchy for cost rollup, health monitoring, and repo registration
-argument-hint: <list|show|create|assign> [org|system|repo] [args]
+argument-hint: <list|overview|github> [org|system|repo] [args]
 disable-model-invocation: true
 allowed-tools: Bash
 model: sonnet
 ---
 
 ```bash
+PARSED_ARGS=()
+while IFS= read -r arg; do
+  PARSED_ARGS+=("$arg")
+done < <(
+  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
+)
+
+SUBCOMMAND="${PARSED_ARGS[0]:-}"
+TARGET="${PARSED_ARGS[1]:-}"
+ARGS=("${PARSED_ARGS[@]:2}")
+
 # Resolve API URL
 if [ -n "${SYN_API_URL:-}" ]; then
   _url="$SYN_API_URL"
@@ -17,21 +28,32 @@ elif [ -f "$HOME/.syntropic137/.env" ]; then
 fi
 _url="${_url:-http://localhost:8137}"
 
-SUBCOMMAND=$(echo "$ARGUMENTS" | awk '{print $1}')
-TARGET=$(echo "$ARGUMENTS" | awk '{print $2}')
-ARGS=$(echo "$ARGUMENTS" | cut -d' ' -f3-)
+_curl_json() {
+  local url="$1"
+  local response
+  if response=$(curl -sf "$url"); then
+    printf '%s\n' "$response" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$response"
+  else
+    echo "Error: API unreachable at $url. Run /syn-health to diagnose." >&2
+    exit 1
+  fi
+}
 
 case "$SUBCOMMAND" in
   list)
     case "$TARGET" in
       org|orgs)
-        curl -sf "$_url/api/v1/organizations" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/organizations"
+        _curl_json "$_url/api/v1/organizations"
         ;;
       system|systems)
-        curl -sf "$_url/api/v1/systems" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/systems"
+        _curl_json "$_url/api/v1/systems"
         ;;
       repo|repos|"")
-        syn github repos 2>/dev/null || curl -sf "$_url/api/v1/repos" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/repos"
+        if command -v syn &>/dev/null; then
+          syn github repos "${ARGS[@]}"
+        else
+          _curl_json "$_url/api/v1/repos"
+        fi
         ;;
       *)
         echo "Usage: /syn-repo list [org|system|repo]"
@@ -39,10 +61,10 @@ case "$SUBCOMMAND" in
     esac
     ;;
   overview)
-    curl -sf "$_url/api/v1/organizations/overview" | python3 -m json.tool 2>/dev/null || curl -sf "$_url/api/v1/organizations/overview"
+    _curl_json "$_url/api/v1/organizations/overview"
     ;;
   github)
-    syn github repos $ARGS
+    syn github repos "${ARGS[@]}"
     ;;
   ""|help)
     echo "Usage: /syn-repo <subcommand> [target] [args]"
@@ -59,8 +81,8 @@ case "$SUBCOMMAND" in
     echo "  /syn-repo overview"
     echo "  /syn-repo github"
     echo ""
-    echo "Note: Organizations, systems, and repos form the hierarchy for cost rollup and health."
-    echo "Repos are typically auto-registered when the GitHub App is installed on a repository."
+    echo "Note: Repos are auto-registered when the GitHub App is installed on a repository."
+    echo "If repos are missing, verify the GitHub App: npx @syntropic137/setup github-app"
     ;;
   *)
     echo "Unknown subcommand: $SUBCOMMAND"

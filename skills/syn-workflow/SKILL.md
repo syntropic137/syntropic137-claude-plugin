@@ -7,50 +7,64 @@ allowed-tools: Bash
 model: sonnet
 ---
 
-Current workflows: !`syn workflow list 2>/dev/null || echo "(syn not found — run: npx @syntropic137/setup cli)"`
+Installed workflows: !`syn workflow list 2>/dev/null || echo "(syn not found — run: npx @syntropic137/setup cli)"`
 
 ```bash
-SUBCOMMAND=$(echo "$ARGUMENTS" | awk '{print $1}')
-ARGS=$(echo "$ARGUMENTS" | cut -d' ' -f2-)
+PARSED_ARGS=()
+while IFS= read -r arg; do
+  PARSED_ARGS+=("$arg")
+done < <(
+  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
+)
+
+SUBCOMMAND="${PARSED_ARGS[0]:-}"
+ARGS=("${PARSED_ARGS[@]:1}")
 
 case "$SUBCOMMAND" in
   list)
-    if echo "$ARGS" | grep -q '\-\-archived'; then
+    INCLUDE_ARCHIVED=false
+    for arg in "${ARGS[@]}"; do
+      if [ "$arg" = "--archived" ] || [ "$arg" = "--include-archived" ]; then
+        INCLUDE_ARCHIVED=true
+        break
+      fi
+    done
+    if [ "$INCLUDE_ARCHIVED" = true ]; then
       syn workflow list --include-archived
     else
       syn workflow list
     fi
     ;;
   show)
-    syn workflow show $ARGS
+    syn workflow show "${ARGS[@]}"
     ;;
   run)
-    syn workflow run $ARGS
+    syn workflow run "${ARGS[@]}"
     ;;
   create)
-    syn workflow create $ARGS
+    syn workflow create "${ARGS[@]}"
     ;;
   validate)
-    syn workflow validate $ARGS
+    syn workflow validate "${ARGS[@]}"
     ;;
   delete)
-    syn workflow delete $ARGS
+    syn workflow delete "${ARGS[@]}"
     ;;
   status)
-    syn workflow status $ARGS
+    syn workflow status "${ARGS[@]}"
     ;;
   ""|help)
     echo "Usage: /syn-workflow <subcommand> [args]"
     echo ""
     echo "Subcommands:"
-    echo "  list [--archived]              List workflow templates"
+    echo "  list [--archived]              List workflows installed in the platform"
     echo "  show <id>                      Show workflow template detail"
     echo "  run <id> --task \"...\" [--input key=value ...]"
     echo "                                 Run a workflow"
     echo "  create --type <type> [--repo owner/repo] [--description \"...\"]"
     echo "                                 Create a new workflow template"
-    echo "  validate <path>                Validate a YAML workflow definition"
-    echo "  delete <id> [--force]          Archive a workflow template"
+    echo "  validate <path>                Validate a local YAML workflow definition"
+    echo "  delete <id> [--force]          Archive an installed workflow"
     echo "  status <execution-id>          Check execution status"
     echo ""
     echo "Examples:"
