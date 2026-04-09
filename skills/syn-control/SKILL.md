@@ -2,96 +2,71 @@
 name: syn-control
 description: Control running Syntropic137 executions — list, pause, resume, cancel, and check status of workflow executions
 argument-hint: <list|status|pause|resume|cancel> [execution-id] [args]
-disable-model-invocation: true
-allowed-tools: Bash
 model: sonnet
 ---
 
-```bash
-PARSED_ARGS=()
-while IFS= read -r arg; do
-  PARSED_ARGS+=("$arg")
-done < <(
-  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
-)
+# /syn-control — Execution Control
 
-SUBCOMMAND="${PARSED_ARGS[0]:-}"
-ARGS=("${PARSED_ARGS[@]:1}")
+Use this skill when you need to monitor or intervene in a running workflow execution. **Check the execution status before taking any control action** — the state tells you exactly what actions are available.
 
-# Resolve API URL for list/status endpoints (not in Node CLI)
-if [ -n "${SYN_API_URL:-}" ]; then
-  _url="$SYN_API_URL"
-elif [ -f "$HOME/.syntropic137/.env" ]; then
-  _hostname=$(grep '^SYN_PUBLIC_HOSTNAME=' "$HOME/.syntropic137/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
-  _url="${_hostname:+https://$_hostname}"
-fi
-_url="${_url:-http://localhost:8137}"
+## When to Use This
 
-_curl_json() {
-  local url="$1"
-  local response
-  if response=$(curl -sf "$url"); then
-    printf '%s\n' "$response" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$response"
-  else
-    echo "Error: API unreachable at $url. Run /syn-health to diagnose." >&2
-    exit 1
-  fi
-}
+Use `/syn-control` when you want to: see what executions are running, pause an execution to review intermediate results, inject corrective context, resume after review, or cancel an execution that's going wrong.
 
-case "$SUBCOMMAND" in
-  list)
-    STATUS_FILTER=$(printf '%s\n' "${ARGS[@]}" | awk '{for (i=1; i<=NF; i++) if ($i=="--status" && i<NF) { print $(i+1); exit }}')
-    if [ -n "$STATUS_FILTER" ]; then
-      _curl_json "$_url/api/v1/executions?status=$STATUS_FILTER"
-    else
-      _curl_json "$_url/api/v1/executions"
-    fi
-    ;;
-  status)
-    EXEC_ID="${ARGS[0]:-}"
-    if [ -z "$EXEC_ID" ]; then
-      _curl_json "$_url/api/v1/executions"
-    else
-      syn control status "$EXEC_ID"
-    fi
-    ;;
-  pause)
-    syn control pause "${ARGS[@]}"
-    ;;
-  resume)
-    syn control resume "${ARGS[@]}"
-    ;;
-  cancel)
-    syn control cancel "${ARGS[@]}"
-    ;;
-  ""|help)
-    echo "Usage: /syn-control <subcommand> [args]"
-    echo ""
-    echo "Subcommands:"
-    echo "  list [--status running|paused|failed|completed]"
-    echo "                                 List workflow executions"
-    echo "  status [execution-id]          Show execution status (all if no ID)"
-    echo "  pause <execution-id> [--reason \"...\"]"
-    echo "                                 Pause a running execution"
-    echo "  resume <execution-id>          Resume a paused execution"
-    echo "  cancel <execution-id> [--reason \"...\"]"
-    echo "                                 Cancel an execution"
-    echo ""
-    echo "Examples:"
-    echo "  /syn-control list"
-    echo "  /syn-control list --status running"
-    echo "  /syn-control status exec-abc123"
-    echo "  /syn-control pause exec-abc123 --reason \"reviewing intermediate results\""
-    echo "  /syn-control resume exec-abc123"
-    echo "  /syn-control cancel exec-abc123 --reason \"wrong workflow\""
-    ;;
-  *)
-    echo "Unknown subcommand: $SUBCOMMAND"
-    echo "Run /syn-control help for usage."
-    exit 1
-    ;;
-esac
+For **diagnosing a failed execution** in depth, the execution-control skill has the full troubleshooting workflow. For **understanding costs from a session**, use `/syn-insights`.
+
+## The Execution State Machine
+
+Every execution is in one of these states. Actions are only valid in the matching state:
+
+```
+RUNNING  → pause → PAUSED → resume → RUNNING
+RUNNING  → cancel → CANCELLED
+PAUSED   → cancel → CANCELLED
 ```
 
-If `syn` is not found, install with: `npx @syntropic137/setup cli`
-On API errors, run `/syn-health` to diagnose platform status.
+`NOT_STARTED`, `COMPLETED`, `FAILED`, `INTERRUPTED` are terminal or pre-start states — no control actions apply.
+
+## Commands
+
+```bash
+syn control list                             # all executions
+syn control list --status running            # filter: running, paused, failed, completed
+syn control status <execution-id>            # detailed phase breakdown
+syn control pause <execution-id>
+syn control pause <execution-id> --reason "reviewing phase 2 output"
+syn control resume <execution-id>
+syn control cancel <execution-id> --reason "wrong workflow"
+```
+
+API fallback (if `syn` CLI not available):
+```bash
+curl http://localhost:8137/api/v1/executions
+curl http://localhost:8137/api/v1/executions?status=running
+```
+
+## Common Scenarios
+
+**"I want to check what's running right now."**
+`syn control list --status running` — shows execution IDs, workflow names, start times.
+
+**"A workflow is analyzing the wrong area — I want to redirect it without restarting."**
+1. `syn control pause <id>` — waits for the current tool call to finish
+2. Inject corrective context: `curl -X POST http://localhost:8137/api/v1/executions/<id>/inject -d '{"message": "Focus only on the auth module", "role": "user"}'`
+3. `syn control resume <id>`
+
+**"An execution has been running for 2 hours and looks stuck."**
+1. `syn control status <id>` — which phase is stuck?
+2. Check the phase's session: the session_id is in the status output
+3. `/syn-insights tools <session-id>` — is a tool hanging?
+4. If confirmed stuck: `syn control cancel <id> --reason "timeout investigation"`
+
+## Finding Execution IDs
+
+If you don't have the ID:
+- `syn control list` — recent executions with IDs
+- `/syn-insights sessions` — sessions map 1:1 to execution phases
+
+## Errors
+
+On API errors, run `/syn-health`. If `syn` CLI is not found: `npx @syntropic137/setup cli`. For deep troubleshooting of failed executions, see the execution-control skill.

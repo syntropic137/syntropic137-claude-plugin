@@ -1,86 +1,77 @@
 ---
 name: syn-workflow
-description: Manage Syntropic137 workflows — list, show, create, run, validate, delete, and check execution status
-argument-hint: <list|show|run|create|validate|delete|status> [args]
-disable-model-invocation: true
-allowed-tools: Bash
+description: Manage Syntropic137 workflows — packages (local cache), list (platform-registered), show, run, create, validate, delete, and check execution status
+argument-hint: <packages|list|show|run|create|validate|delete|status> [args]
 model: sonnet
 ---
 
-Installed workflows: !`syn workflow list 2>/dev/null || echo "(syn not found — run: npx @syntropic137/setup cli)"`
+# /syn-workflow — Workflow Management
 
-```bash
-PARSED_ARGS=()
-while IFS= read -r arg; do
-  PARSED_ARGS+=("$arg")
-done < <(
-  python3 -c 'import os, shlex; [print(arg) for arg in shlex.split(os.environ.get("ARGUMENTS", ""))]'
-)
+Use this skill when you need to interact with workflow templates and executions from the command line. All operations use the `syn` CLI. Install it with `npx @syntropic137/setup cli` if not present.
 
-SUBCOMMAND="${PARSED_ARGS[0]:-}"
-ARGS=("${PARSED_ARGS[@]:1}")
+## When to Use This
 
-case "$SUBCOMMAND" in
-  list)
-    INCLUDE_ARCHIVED=false
-    for arg in "${ARGS[@]}"; do
-      if [ "$arg" = "--archived" ] || [ "$arg" = "--include-archived" ]; then
-        INCLUDE_ARCHIVED=true
-        break
-      fi
-    done
-    if [ "$INCLUDE_ARCHIVED" = true ]; then
-      syn workflow list --include-archived
-    else
-      syn workflow list
-    fi
-    ;;
-  show)
-    syn workflow show "${ARGS[@]}"
-    ;;
-  run)
-    syn workflow run "${ARGS[@]}"
-    ;;
-  create)
-    syn workflow create "${ARGS[@]}"
-    ;;
-  validate)
-    syn workflow validate "${ARGS[@]}"
-    ;;
-  delete)
-    syn workflow delete "${ARGS[@]}"
-    ;;
-  status)
-    syn workflow status "${ARGS[@]}"
-    ;;
-  ""|help)
-    echo "Usage: /syn-workflow <subcommand> [args]"
-    echo ""
-    echo "Subcommands:"
-    echo "  list [--archived]              List workflows installed in the platform"
-    echo "  show <id>                      Show workflow template detail"
-    echo "  run <id> --task \"...\" [--input key=value ...]"
-    echo "                                 Run a workflow"
-    echo "  create --type <type> [--repo owner/repo] [--description \"...\"]"
-    echo "                                 Create a new workflow template"
-    echo "  validate <path>                Validate a local YAML workflow definition"
-    echo "  delete <id> [--force]          Archive an installed workflow"
-    echo "  status <execution-id>          Check execution status"
-    echo ""
-    echo "Examples:"
-    echo "  /syn-workflow list"
-    echo "  /syn-workflow run wf-abc123 --task \"refactor auth module\""
-    echo "  /syn-workflow run wf-abc123 --task \"fix login bug\" --input repository=owner/repo"
-    echo "  /syn-workflow status exec-xyz"
-    echo "  /syn-workflow validate ./my-workflow.yaml"
-    ;;
-  *)
-    echo "Unknown subcommand: $SUBCOMMAND"
-    echo "Run /syn-workflow help for usage."
-    exit 1
-    ;;
-esac
+Use `/syn-workflow` when you want to: browse what workflows exist (`list`, `packages`), inspect a workflow's phases (`show`), kick off a run (`run`), or validate a YAML definition before registering it (`validate`).
+
+For **designing** a new workflow template from scratch, the workflow-management skill has the full conceptual model and YAML schema. For **monitoring a running execution**, use `/syn-control`.
+
+## packages vs list — Two Different Things
+
+**`packages`** — locally cached workflow YAMLs on disk (`~/.syntropic137/workflows/` or `./workflows/`). These are downloaded definitions that may not yet be registered in the running platform. Shows the `input_declarations` (Required/Optional inputs) for each:
+
+```
+syn workflow packages
 ```
 
-If `syn` is not found, install with: `npx @syntropic137/setup cli`
-On API errors, run `/syn-health` to diagnose platform status.
+```
+Local workflow packages (~/.syntropic137/workflows/):
+
+  github-pr-review
+    Required: pr_url, repository
+    Optional: branch  [default: main]
+
+  self-healing-ci
+    Required: workflow_id, repository
+```
+
+**`list`** — workflows currently registered in the running Syntropic137 instance. These are what the platform can actually execute:
+
+```
+syn workflow list
+```
+
+**The common pattern:** browse `packages` to see what inputs a workflow needs before running it, then use `list` to confirm it's registered, then `run` it.
+
+## Core Commands
+
+```bash
+syn workflow packages                          # locally cached workflow definitions
+syn workflow list                              # platform-registered workflows
+syn workflow list --include-archived           # include archived templates
+syn workflow show <id>                         # phase definitions, config, input declarations
+syn workflow run <id> --task "Fix auth bug"
+syn workflow run <id> --task "Review PR" --input repository=owner/repo
+syn workflow validate path/to/workflow.yaml    # validate before registering
+syn workflow delete <id>
+syn workflow delete <id> --force               # skip confirmation
+syn workflow status <execution-id>             # check a running execution
+```
+
+Short alias: `syn run <id> -t "task description"`
+
+## Common Scenarios
+
+**"I want to run a workflow but don't know its inputs."**
+1. `syn workflow packages` — shows required and optional inputs per workflow
+2. `syn workflow run <id> --task "..." --input key=value` for each required input
+
+**"I want to check if a workflow is already registered."**
+`syn workflow list` — if it's not there, install it from the marketplace or validate + register your YAML.
+
+**"I wrote a new workflow YAML and want to use it."**
+1. `syn workflow validate ./my-workflow.yaml` — catch errors before registering
+2. `syn workflow create --type implementation --repo owner/repo --description "..."` — or `just seed-workflows` in the source repo
+
+## Errors
+
+On errors, run `/syn-health` to check platform status. For deep workflow design questions, see the workflow-management skill. Run `syn workflow --help` for full flag reference.
