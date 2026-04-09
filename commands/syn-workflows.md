@@ -1,7 +1,7 @@
 ---
 model: sonnet
 allowed-tools: Bash
-argument-hint: "[list | show <id> | search <query>]"
+argument-hint: "[packages | list | show <id> | search <query>]"
 ---
 
 # /syn-workflows — Workflow Management
@@ -32,6 +32,9 @@ fi
 
 Parse the user's argument to determine the subcommand:
 
+- `packages` →
+  - If SYN_CLI: `$SYN_CLI workflow packages`
+  - Else: tell the user `syn` is not installed and suggest `npx @syntropic137/setup cli`; optionally scan `~/.syntropic137/workflows/` or `./workflows/` and display any YAML filenames found
 - No argument or `list` →
   - If SYN_CLI: `$SYN_CLI workflow list`
   - Fallback: `curl -sf "$SYN_API_URL/api/v1/workflows"`
