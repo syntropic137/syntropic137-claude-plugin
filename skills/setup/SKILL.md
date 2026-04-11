@@ -131,7 +131,7 @@ Re-run any stage: `just setup-stage <stage_name>`
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CLOUDFLARE_TUNNEL_TOKEN` | For tunnel | Cloudflare tunnel token |
-| `SYN_DOMAIN` | For tunnel | Public domain (e.g., `syn.yourdomain.com`) |
+| `SYN_PUBLIC_HOSTNAME` | For tunnel | Public domain (e.g., `syn.yourdomain.com`) |
 | `POSTGRES_PASSWORD` | Yes | Database password |
 | `POSTGRES_DB` | Yes | Database name (default: `syntropic137`) |
 | `MINIO_ROOT_USER` | Yes | MinIO access key |
@@ -186,7 +186,7 @@ Zero-trust external access — webhooks from GitHub, remote dashboard access, AP
 2. Go to Zero Trust dashboard → Network → Tunnels → Create
 3. Copy the tunnel token or install command
 4. Run `just onboard` → stage 7 asks for token + domain
-5. Writes `CLOUDFLARE_TUNNEL_TOKEN` and `SYN_DOMAIN` to `infra/.env`
+5. Writes `CLOUDFLARE_TUNNEL_TOKEN` and `SYN_PUBLIC_HOSTNAME` to `infra/.env`
 6. `cloudflared` container runs in Docker stack
 7. Set tunnel's public hostname service URL to `http://gateway:8081` in Cloudflare dashboard
 
