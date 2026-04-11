@@ -15,11 +15,22 @@ Use this when you are: designing a new workflow template, debugging unexpected p
 
 Not needed when you just want to **run** an existing workflow; use the execution-control skill instead. Not needed when you want to list or inspect already-registered workflows; use `/syn-workflow` for that.
 
+## Phases Are Claude Code Sessions
+
+Each workflow phase is a full Claude CLI invocation. That means phase prompts can invoke any slash command (`/syn-*`, `/commit`, `/review`, etc.) and any installed skill directly by name. When designing a phase prompt, consult the Claude Code commands and skills references to know what's available:
+
+- Commands: https://code.claude.com/docs/en/commands.md
+- Skills: https://code.claude.com/docs/en/skills.md
+
+Write phase prompts the same way you'd write instructions to Claude Code in a terminal session.
+
 ## The Core Model: Templates vs Executions
 
 A **workflow template** is a reusable definition (like a class). A **workflow execution** is a running instance (like an object). One template can have many concurrent executions with different tasks, repos, and inputs.
 
 Templates define **phases**: each phase is one Claude CLI invocation in its own workspace. Phases run sequentially by default; outputs from phase N feed into phase N+1 via `{{phase-id}}` substitution.
+
+**Phase workspaces are ephemeral.** Each phase starts in a fresh Docker container: no git branches, staged files, commits, or file changes from a prior phase carry over. The only thing that crosses a phase boundary is the artifact output. If a phase needs to do git work (commit, push, `gh pr create`), it must do so in the same phase that made the changes. If a later phase needs those changes, either collapse the phases or have the earlier phase output a patch/diff artifact that the later phase applies.
 
 ## Designing a Workflow: 4 Phases
 
@@ -92,6 +103,8 @@ See `workflow-management` skill for full YAML schema reference including `allowe
 **Every phase using opus.** Costs scale fast with opus. Audit your model assignments whenever a workflow runs expensive.
 
 **Missing `input_declarations` for inputs used in prompts.** If `{{repository}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
+
+**Splitting git operations across phases.** If phase 1 commits code and phase 2 tries to push or open a PR, phase 2 will start with a clean workspace and find nothing to push. All git operations, including commit, push, and `gh pr create`, must happen in the same phase that wrote the changes. If the workflow design requires separating research/implementation from the git step, have the implementation phase output a patch artifact and have the git phase apply it in a fresh clone.
 
 **Skipping HUMAN_IN_LOOP on destructive workflows.** Any workflow that writes, commits, or deploys should pause for human review. Automation without oversight is how you get force-pushed to main at 2am.
 
