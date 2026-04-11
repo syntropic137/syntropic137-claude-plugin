@@ -17,7 +17,7 @@ Not needed when you just want to **run** an existing workflow; use the execution
 
 ## Phases Are Claude Code Sessions
 
-Each workflow phase is a full Claude Code CLI invocation. That means phase prompts can invoke any slash command (`/syn-*`, `/commit`, `/review`, etc.) and any installed skill directly by name. When designing a phase prompt, consult the Claude Code commands and skills references to know what's available:
+Each workflow phase is a full Claude CLI invocation. That means phase prompts can invoke any slash command (`/syn-*`, `/commit`, `/review`, etc.) and any installed skill directly by name. When designing a phase prompt, consult the Claude Code commands and skills references to know what's available:
 
 - Commands: https://code.claude.com/docs/en/commands.md
 - Skills: https://code.claude.com/docs/en/skills.md
@@ -104,7 +104,7 @@ See `workflow-management` skill for full YAML schema reference including `allowe
 
 **Missing `input_declarations` for inputs used in prompts.** If `{{repository}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
 
-**Splitting git operations across phases.** If phase 1 commits code and phase 2 tries to push or open a PR, phase 2 will start with a clean workspace and find nothing to push. All git operations, commit, push, `gh pr create`, must happen in the same phase that wrote the changes. If the workflow design requires separating research/implementation from the git step, have the implementation phase output a patch artifact and have the git phase apply it in a fresh clone.
+**Splitting git operations across phases.** If phase 1 commits code and phase 2 tries to push or open a PR, phase 2 will start with a clean workspace and find nothing to push. All git operations, including commit, push, and `gh pr create`, must happen in the same phase that wrote the changes. If the workflow design requires separating research/implementation from the git step, have the implementation phase output a patch artifact and have the git phase apply it in a fresh clone.
 
 **Skipping HUMAN_IN_LOOP on destructive workflows.** Any workflow that writes, commits, or deploys should pause for human review. Automation without oversight is how you get force-pushed to main at 2am.
 
