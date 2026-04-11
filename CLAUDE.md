@@ -62,6 +62,19 @@ claude plugin install syntropic137@syntropic137
 
 See [./SECURITY.md](./SECURITY.md) for the full security model. The critical rule: **secrets must never enter Claude's context window.** All credential input uses `!` prefix (external shell execution), file paths instead of file content, and `grep -q` status checks instead of value reads. Contributors must follow these patterns — see the rules in SECURITY.md before touching any setup or secrets code.
 
+## Claude Code Documentation
+
+When authoring workflow phases, skills, or commands, reference the official Claude Code docs:
+
+- Commands reference: https://code.claude.com/docs/en/commands.md
+- Skills reference: https://code.claude.com/docs/en/skills.md
+
+Each Syntropic137 workflow phase is a Claude CLI invocation. Phase prompts can invoke slash commands and skills directly. Workflow authors should be familiar with what commands and skills are available.
+
+## Writing Style
+
+Use colons `:` and commas `,` instead of dashes or em dashes in prose. This applies to all skill files, commands, and documentation.
+
 ## Scratch files
 
 Root-level `.md` files (except `README.md`, `CLAUDE.md`, `SECURITY.md`) are scratch — never commit them.
