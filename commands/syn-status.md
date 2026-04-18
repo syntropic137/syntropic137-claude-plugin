@@ -34,7 +34,7 @@ fi
 ```
 
 If Docker is not running or no containers exist, note that the stack is down and suggest:
-- Published path (`~/.syntropic137/`): `cd ~/.syntropic137 && ./syn-ctl up`
+- Published path (`~/.syntropic137/`): `npx @syntropic137/setup start`
 - Source repo: `just selfhost-up` or `just dev`
 
 ## 2. API Health

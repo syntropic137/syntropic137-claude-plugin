@@ -226,7 +226,7 @@ just seed-all         # Seed everything
 ### "How do I test triggers locally?"
 
 1. Start the stack:
-   - Published path: `cd ~/.syntropic137 && ./syn-ctl up`
+   - Published path: `npx @syntropic137/setup start`
    - Source repo: `just dev` (includes webhook proxy)
 2. Verify webhooks are being delivered:
    - Selfhost: check Cloudflare tunnel status in Zero Trust dashboard

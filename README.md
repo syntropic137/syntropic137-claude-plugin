@@ -72,10 +72,10 @@ through configuration. Pick which features to enable (GitHub App, Cloudflare,
 ## Managing Your Stack
 
 **Published path** (`~/.syntropic137/`):
-- `./syn-ctl status` — service health
-- `./syn-ctl logs [service]` — tail logs
-- `./syn-ctl up` / `./syn-ctl down` — start/stop
-- `./syn-ctl update` — pull latest images
+- `npx @syntropic137/setup status` — service health
+- `npx @syntropic137/setup logs` — tail logs
+- `npx @syntropic137/setup start` / `npx @syntropic137/setup stop` — start/stop
+- `npx @syntropic137/setup update` — pull latest images
 
 **Source repo** (contributors):
 - `just selfhost-status`, `just selfhost-logs`, `just selfhost-up`, `just selfhost-down`

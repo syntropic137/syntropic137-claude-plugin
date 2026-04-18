@@ -42,17 +42,16 @@ Every plugin command resolves this before making API calls. If the user is on a 
 
 ### Published Path (Self-Hosters)
 
-Self-hosters install to `~/.syntropic137/` and use `syn-ctl` for management. No `uv`, `just`, or source repo required.
+Self-hosters install to `~/.syntropic137/` via `npx @syntropic137/setup`. No `uv`, `just`, or source repo required.
 
 ```bash
-cd ~/.syntropic137
-./syn-ctl up                  # Start the stack
-./syn-ctl down                # Stop the stack
-./syn-ctl logs [service]      # View logs
-./syn-ctl update              # Pull latest images and restart
+npx @syntropic137/setup start   # Start the stack
+npx @syntropic137/setup stop    # Stop the stack
+npx @syntropic137/setup logs    # View logs
+npx @syntropic137/setup update  # Pull latest images and restart
 ```
 
-The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. All stack management goes through `syn-ctl` or direct `docker compose -f docker-compose.syntropic137.yaml` commands.
+The published compose file is `docker-compose.syntropic137.yaml` in `~/.syntropic137/`. All stack management goes through `npx @syntropic137/setup` or direct `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml` commands.
 
 ### Quick Dev Setup (Source Repo)
 

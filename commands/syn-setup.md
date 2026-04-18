@@ -99,7 +99,7 @@ Then ask the user:
 > 3. Reconfigure from scratch (backs up current .env)
 
 - **Option 1:** Identify which phases are incomplete and skip to the first missing one. For example, if secrets and API key exist but GitHub App is not configured, skip to Phase 7.
-- **Option 2:** Download the latest compose file and `syn-ctl`, run `docker compose pull`, restart. Preserve `.env` and secrets.
+- **Option 2:** Run `npx @syntropic137/setup update` to pull the latest compose file and images and restart. Preserve `.env` and secrets.
 - **Option 3:** Back up `.env` to `.env.backup.<timestamp>`, then proceed from Phase 3 as a fresh install.
 
 ---
@@ -121,17 +121,15 @@ RELEASE_BASE="https://github.com/syntropic137/syntropic137/releases/download/${L
 
 curl -sL "${RELEASE_BASE}/docker-compose.syntropic137.yaml" -o "$HOME/.syntropic137/docker-compose.syntropic137.yaml"
 curl -sL "${RELEASE_BASE}/selfhost.env.example" -o "$HOME/.syntropic137/.env"
-curl -sL "${RELEASE_BASE}/syn-ctl" -o "$HOME/.syntropic137/syn-ctl"
 curl -sL "${RELEASE_BASE}/selfhost-entrypoint.sh" -o "$HOME/.syntropic137/selfhost-entrypoint.sh"
 
-chmod +x "$HOME/.syntropic137/syn-ctl"
 chmod +x "$HOME/.syntropic137/selfhost-entrypoint.sh"
 ```
 
 Verify all files were downloaded (non-empty):
 
 ```bash
-for f in docker-compose.syntropic137.yaml .env syn-ctl selfhost-entrypoint.sh; do
+for f in docker-compose.syntropic137.yaml .env selfhost-entrypoint.sh; do
   test -s "$HOME/.syntropic137/$f" && echo "$f: OK" || echo "$f: FAILED"
 done
 ```
@@ -409,7 +407,7 @@ echo "SYN_1PASSWORD_BACKUP=true" >> "$HOME/.syntropic137/.env"
 
 Tell the user:
 
-> All secrets backed up to 1Password vault "syntropic137", item "syntropic137-config". You can restore on a new machine with `./syn-ctl secrets-pull`.
+> All secrets backed up to 1Password vault "syntropic137", item "syntropic137-config". You can restore on a new machine by re-running `npx @syntropic137/setup init`.
 
 ---
 
