@@ -46,7 +46,7 @@ The wizard runs these in order. You can re-run any individual stage:
 | 4 | `generate_secrets` | db/redis passwords (32-byte hex) |
 | 5 | `configure_1password` | optional vault integration |
 | 6 | `validate_environment` | audit all env vars |
-| 7 | `configure_cloudflare` | tunnel token + domain |
+| 7 | `configure_cloudflare` | tunnel token + public hostname |
 | 8 | `configure_smee` | dev webhook proxy fallback |
 | 9 | `configure_github_app` | create/connect GitHub App |
 | 10 | `configure_env` | write `.env` from templates |
