@@ -19,13 +19,21 @@ fi
 SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 ```
 
-Run the health check:
+Detect whether the `syn` CLI is available:
 
 ```bash
-curl -sf "$SYN_API_URL/health"
+if command -v syn &>/dev/null; then
+    SYN_CLI="syn"
+else
+    SYN_CLI=""
+fi
 ```
 
-If the command succeeds, display the health response JSON.
+Run the health check:
+- If SYN_CLI is set: `$SYN_CLI health`
+- Otherwise: `curl -sf "$SYN_API_URL/health"`
+
+If the command succeeds, display the health response.
 
 If it fails (non-zero exit or connection error):
 1. Check if Docker is running: `docker info >/dev/null 2>&1`
@@ -38,9 +46,9 @@ If it fails (non-zero exit or connection error):
    fi
    ```
 3. If the container exists but API is unhealthy, suggest checking logs:
-   - Published path (`~/.syntropic137/`): `cd ~/.syntropic137 && ./syn-ctl logs`
+   - Published path (`~/.syntropic137/`): `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml logs`
    - Source repo: `just dev-logs`
 4. If no containers are running, suggest starting the stack:
-   - Published path: `cd ~/.syntropic137 && ./syn-ctl up` or `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml up -d`
+   - Published path: `npx @syntropic137/setup` (interactive menu) or `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml up -d`
    - Source repo: `just selfhost-up` or `just dev`
 5. If Docker itself is not running, suggest starting Docker Desktop

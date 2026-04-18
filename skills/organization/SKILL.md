@@ -3,155 +3,113 @@ name: organization
 description: Manage the Syntropic137 Organization→System→Repo hierarchy for cost rollup, health monitoring, and contribution tracking
 ---
 
-# Organization Management — Syntropic137
+# Organization Management: Syntropic137
 
-Use this knowledge when the user wants to manage organizations, systems, and repositories — the structural hierarchy for tracking health, costs, and patterns across their projects.
+When you need to understand where your AI engineering spend is going, or which systems are healthy vs degraded, the organization hierarchy is the structure that makes that possible. Without it, costs and health metrics are a flat list with no grouping.
 
-## Organization Hierarchy
+**NEVER assign a repo to a system without first checking if it's already assigned.** A repo can only belong to one system; assigning without unassigning first will fail silently in some CLI versions.
+
+## When to Use This Skill
+
+Use this when you are: setting up the org/system/repo structure for the first time, tracking costs across a group of related repos, checking system health, or reorganizing repos between systems.
+
+Not needed for listing registered repos quickly; use `/syn-repo` for that. Not needed for GitHub App installation; use the github-automation skill.
+
+## The Hierarchy and Why It Exists
 
 ```
-Organization (top-level entity, e.g., "Syntropic137")
-  └── System (logical grouping, e.g., "Backend", "Frontend", "Infrastructure")
-       └── Repo (registered GitHub repository)
+Organization  (e.g., "Syntropic137")
+  └── System  (e.g., "Backend", "Frontend", "Infrastructure")
+       └── Repo  (registered GitHub repository)
 ```
 
-This hierarchy enables:
-- **Cost rollup** — see spend by system or org
-- **Health monitoring** — system-level health across all repos
-- **Pattern analysis** — execution trends per system
-- **Contribution heatmaps** — team activity across repos
+This structure exists for three reasons:
+1. **Cost rollup**: see total AI spend per system, not just per session
+2. **Health monitoring**: system-level health aggregates across all its repos (healthy / degraded / failing)
+3. **Contribution heatmaps**: team activity patterns across repos, grouped by system
 
-## Organizations
+If you're a solo developer on one project, you may only need one org + one system + one repo. The structure scales to large engineering orgs with dozens of repos.
+
+## Setting Up the Hierarchy: 3 Steps
+
+**Step 1: Create an organization.**
+```bash
+syn organization create --name "MyOrg" --slug "myorg"
+```
+The slug is used in API paths and must be unique. Most teams only need one organization.
+
+**Step 2: Create systems** to group related repos:
+```bash
+syn system create --organization <org-id> --name "Backend" --description "API and domain services"
+syn system create --organization <org-id> --name "Frontend" --description "React apps"
+```
+
+**Step 3: Assign repos to systems.** Repos are auto-registered when the GitHub App fires; you just assign them:
+```bash
+syn repo assign <repo-id> --system <system-id>
+```
+
+List registered repos to find their IDs: `syn github repos` or `curl http://localhost:8137/api/v1/repos`.
+
+## Checking Health and Costs
+
+System health (healthy / degraded / failing across all member repos):
+```bash
+syn system status <system-id>
+```
+
+System cost breakdown:
+```bash
+syn system cost <system-id>
+```
+
+Cross-org overview (all systems, all costs, all health):
+```bash
+syn insights overview
+```
+
+## Read Models Available
+
+| Read Model | Query | Use For |
+|-----------|-------|---------|
+| `GlobalOverview` | `syn insights overview` | Cross-org health + cost summary |
+| `SystemStatus` | `syn system status <id>` | Per-system health (healthy/degraded/failing) |
+| `SystemPatterns` | `GET /systems/{id}/patterns` | Execution trends per system |
+| `SystemCost` | `syn system cost <id>` | System-level cost aggregation |
+| `ContributionHeatmap` | `syn insights heatmap` | Team activity across repos |
+
+## Repo Management
+
+Repos are registered automatically when the GitHub App is installed. Manual registration is only needed for repos where you want tracking but don't have the App installed:
 
 ```bash
-# List organizations
-curl -s http://localhost:8137/organizations | python -m json.tool
-
-# Create organization
-curl -X POST http://localhost:8137/organizations \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Syntropic137", "slug": "syn137"}'
-
-# Get organization detail
-curl -s http://localhost:8137/organizations/<org-id> | python -m json.tool
-
-# Update
-curl -X PUT http://localhost:8137/organizations/<org-id> \
-  -d '{"name": "New Name"}'
-
-# Delete (soft delete — cannot update/delete again after)
-curl -X DELETE http://localhost:8137/organizations/<org-id>
+syn repo assign <repo-id> --system <system-id>
+syn repo unassign <repo-id>              # must unassign before reassigning
+syn repo health <repo-id>
+syn repo cost <repo-id>
+syn repo failures <repo-id>
 ```
 
-### Domain Model
+## When NOT to Use This Skill
 
-- **Aggregate**: `OrganizationAggregate`
-- **State**: `name`, `slug`, `created_by`, `created_at`, `is_deleted`
-- **Events**: `OrganizationCreatedEvent`, `OrganizationUpdatedEvent`, `OrganizationDeletedEvent`
-- **Invariant**: Cannot update or delete if already deleted
+Don't create systems just to satisfy the hierarchy. If you're not actively using cost rollup or health monitoring, the flat default (one org, no systems) is fine. Add structure when the need is real, not in anticipation of future use.
 
-## Systems
+## Escalation Point
 
-Systems group related repos for monitoring and cost analysis.
+If a repo isn't showing up in `syn repo list` after GitHub App installation, check trigger history and App installation status before manually registering. The App fires a `RepoRegisteredEvent` on first webhook; if no events have come in, the App may not be installed on that repo yet.
+
+## Integration
+
+Set up organization hierarchy before configuring trigger rules in github-automation; the system/repo structure is needed for cost attribution in trigger-fired executions. Query costs and health via `/syn-repo` from Claude Code.
+
+## CLI Quick Reference
 
 ```bash
-# List systems in an org
-curl -s "http://localhost:8137/systems?organization_id=<org-id>" | python -m json.tool
-
-# Create system
-curl -X POST http://localhost:8137/systems \
-  -H "Content-Type: application/json" \
-  -d '{
-    "organization_id": "<org-id>",
-    "name": "Backend Services",
-    "description": "API and domain services"
-  }'
-
-# Get system detail (includes health, cost data)
-curl -s http://localhost:8137/systems/<system-id> | python -m json.tool
-
-# Get system health status
-curl -s http://localhost:8137/systems/<system-id>/status | python -m json.tool
-
-# Get system cost
-curl -s http://localhost:8137/systems/<system-id>/cost | python -m json.tool
+syn org list
+syn system list
+syn system status <system-id>
+syn system cost <system-id>
+syn github repos
+syn repo list
+syn insights overview
 ```
-
-### Domain Model
-
-- **Aggregate**: `SystemAggregate`
-- **State**: `organization_id`, `name`, `description`, `created_by`, `is_deleted`
-- **Events**: `SystemCreatedEvent`, `SystemUpdatedEvent`, `SystemDeletedEvent`
-- **Invariant**: Linked to parent organization
-
-## Repositories
-
-Repos are registered from GitHub App installations and can be assigned to systems.
-
-```bash
-# List repos
-curl -s "http://localhost:8137/repos?organization_id=<org-id>" | python -m json.tool
-
-# Register repo (usually automatic via GitHub App)
-curl -X POST http://localhost:8137/repos \
-  -H "Content-Type: application/json" \
-  -d '{
-    "organization_id": "<org-id>",
-    "provider": "github",
-    "provider_repo_id": "123456",
-    "full_name": "syntropic137/syntropic137",
-    "owner": "syntropic137",
-    "default_branch": "main",
-    "installation_id": "<installation-id>"
-  }'
-
-# Assign repo to system
-curl -X POST http://localhost:8137/repos/<repo-id>/assign \
-  -d '{"system_id": "<system-id>"}'
-
-# Unassign from system (must unassign before reassigning)
-curl -X POST http://localhost:8137/repos/<repo-id>/unassign
-```
-
-### Domain Model
-
-- **Aggregate**: `RepoAggregate`
-- **State**: `organization_id`, `system_id`, `provider`, `provider_repo_id`, `full_name`, `owner`, `default_branch`, `installation_id`, `is_private`
-- **Events**: `RepoRegisteredEvent`, `RepoAssignedToSystemEvent`, `RepoUnassignedFromSystemEvent`
-- **Invariant**: Can only assign once — must unassign first to reassign
-
-## Read Models (Projections)
-
-The organization context has rich read models for operational intelligence:
-
-| Read Model | Purpose | Query |
-|-----------|---------|-------|
-| `GlobalOverview` | Cross-org overview with cost rollup | `GET /organizations/overview` |
-| `SystemStatus` | Per-system health (healthy/degraded/failing) | `GET /systems/{id}/status` |
-| `SystemPatterns` | Execution patterns and trends | `GET /systems/{id}/patterns` |
-| `SystemCost` | System-level cost aggregation | `GET /systems/{id}/cost` |
-| `ContributionHeatmap` | Team contribution patterns | `GET /insights/heatmap` |
-
-## Seeding Data
-
-For development, seed sample org/system/repo data:
-
-```bash
-just seed-organization    # Seed org, system, repos
-just seed-all             # Seed everything (workflows + triggers + org)
-```
-
-## Common Scenarios
-
-### "Track costs across my backend services"
-
-1. Create an organization
-2. Create a "Backend" system
-3. Register repos and assign to the system
-4. View system cost: `GET /systems/<id>/cost`
-
-### "See health across all my repos"
-
-1. Ensure repos are registered and assigned to systems
-2. Check system status: `GET /systems/<id>/status` — shows healthy/degraded/failing per repo
-3. Global overview: `GET /organizations/overview` — cross-org summary

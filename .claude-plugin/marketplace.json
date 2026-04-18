@@ -13,7 +13,7 @@
       "name": "syntropic137",
       "source": "./",
       "description": "Setup, observe, and operate your AI agent workflow engine from Claude Code",
-      "version": "0.2.0",
+      "version": "0.9.0",
       "author": { "name": "Syntropic137" },
       "category": "devops",
       "tags": ["ai-agents", "orchestration", "observability", "workflows", "docker"]

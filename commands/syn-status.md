@@ -19,6 +19,16 @@ fi
 SYN_API_URL="${SYN_API_URL:-http://localhost:8137}"
 ```
 
+Detect whether the `syn` CLI is available:
+
+```bash
+if command -v syn &>/dev/null; then
+    SYN_CLI="syn"
+else
+    SYN_CLI=""
+fi
+```
+
 Run the following three checks and present a unified status view:
 
 ## 1. Container Status
@@ -34,22 +44,20 @@ fi
 ```
 
 If Docker is not running or no containers exist, note that the stack is down and suggest:
-- Published path (`~/.syntropic137/`): `cd ~/.syntropic137 && ./syn-ctl up`
+- Published path (`~/.syntropic137/`): `npx @syntropic137/setup` (interactive menu) or `docker compose -f ~/.syntropic137/docker-compose.syntropic137.yaml up -d`
 - Source repo: `just selfhost-up` or `just dev`
 
 ## 2. API Health
 
-```bash
-curl -sf "$SYN_API_URL/health"
-```
+- If SYN_CLI: `$SYN_CLI health`
+- Else: `curl -sf "$SYN_API_URL/health"`
 
 If the API is unreachable, note it and suggest checking container status or starting the stack.
 
 ## 3. Recent Activity
 
-```bash
-curl -sf "$SYN_API_URL/api/v1/metrics"
-```
+- If SYN_CLI: `$SYN_CLI metrics show`
+- Else: `curl -sf "$SYN_API_URL/api/v1/metrics"`
 
 ## Presentation
 

@@ -3,291 +3,109 @@ name: execution-control
 description: Run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), and troubleshoot failed Syntropic137 executions
 ---
 
-# Execution Control — Syntropic137
+# Execution Control: Syntropic137
 
-Use this knowledge when the user wants to run workflows, monitor execution progress, pause/resume/cancel executions, or understand why an execution failed.
+When a workflow execution does something unexpected (runs too long, fails a phase, produces wrong output), you need to understand the execution model before taking action. **NEVER re-run a failed execution without first checking which phase failed and why.** Re-running blindly burns budget and obscures the actual problem.
+
+## When to Use This Skill
+
+Use this when you are: starting a workflow execution, monitoring progress across phases, intervening in a running execution (pause, inject context, cancel), or diagnosing a failure. 
+
+Not needed for designing the workflow template itself; use workflow-management for that. Not needed for deep cost or token analysis; use the observability skill.
+
+## The Execution State Machine
+
+Every execution moves through states. Understanding the state tells you what action is available:
+
+```
+NOT_STARTED → RUNNING → COMPLETED
+                      ↘ FAILED
+                      ↘ PAUSED → RUNNING (on resume)
+                      ↘ CANCELLED
+                      ↘ INTERRUPTED (partial state preserved)
+```
+
+Each **phase** within an execution has its own state: `PENDING → RUNNING → COMPLETED | FAILED | SKIPPED`.
+
+The system uses the **Processor To-Do List** pattern: crash-resilient execution where the aggregate is the sole decision-maker. If the platform restarts mid-execution, it picks up from the last completed step automatically. Handlers are idempotent.
 
 ## Running a Workflow
 
-### Via CLI
+```bash
+syn workflow run <workflow-id> --task "Fix the auth timeout bug"
+syn workflow run <workflow-id> --task "Review PR #42" --input repository=owner/repo
+syn run <workflow-id> -t "Implement retry logic"   # short alias
+```
+
+With budget control: add `--max-budget-usd 5.00` to cap spend per execution.
+
+Via API: `POST /api/v1/workflows/<id>/execute` with `{"task": "...", "inputs": {...}, "max_budget_usd": 5.00}`.
+
+## Monitoring Progress
+
+Check a specific execution: `syn control status <execution-id>`
+
+List all active executions: `curl -sf http://localhost:8137/api/v1/executions | python3 -m json.tool`
+
+Filter by status: `curl -sf "http://localhost:8137/api/v1/executions?status=running"`
+
+The execution detail shows each phase's status, session ID, cost, and duration; this is your first stop when something looks wrong.
+
+## Control Plane: Intervening in a Running Execution
+
+### Pause and Resume
+
+Pause is **graceful**: the agent finishes its current tool call before halting:
 
 ```bash
-# Run a workflow with inputs
-uv run --package syn-cli syn workflow run <workflow-id> \
-  --input issue_url=https://github.com/org/repo/issues/42 \
-  --input priority=high
-
-# Short alias
-uv run --package syn-cli syn run <workflow-id> --input issue_url=...
-
-# With provider override
-uv run --package syn-cli syn workflow run <workflow-id> --provider claude
-
-# Check execution status
-uv run --package syn-cli syn workflow status <execution-id>
+syn control pause <execution-id> --reason "reviewing intermediate results"
+syn control resume <execution-id>
 ```
 
-### Via API
-
-```bash
-# Start execution
-curl -X POST http://localhost:8137/workflows/<workflow-id>/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "inputs": {"issue_url": "https://github.com/org/repo/issues/42"},
-    "provider": "claude",
-    "max_budget_usd": 5.00
-  }'
-
-# Response
-{
-  "execution_id": "exec-abc123",
-  "workflow_id": "wf-xyz",
-  "status": "running",
-  "started_at": "2026-03-18T10:00:00Z"
-}
-```
-
-## Monitoring Executions
-
-### List Executions
-
-```bash
-# All executions
-uv run --package syn-cli syn sessions list
-
-# Filter by status
-curl -s "http://localhost:8137/executions?status=running" | python -m json.tool
-curl -s "http://localhost:8137/executions?status=failed" | python -m json.tool
-```
-
-### Execution Detail
-
-```bash
-# Full detail with phase breakdown
-curl -s http://localhost:8137/executions/<execution-id> | python -m json.tool
-```
-
-Response shape:
-```json
-{
-  "workflow_execution_id": "exec-abc123",
-  "workflow_id": "wf-xyz",
-  "workflow_name": "Fix Bug in Auth Service",
-  "status": "running",
-  "started_at": "2026-03-18T10:00:00Z",
-  "completed_at": null,
-  "phases": [
-    {
-      "phase_id": "analyze",
-      "name": "Bug Analysis",
-      "status": "completed",
-      "session_id": "sess-111",
-      "artifact_id": "art-aaa",
-      "input_tokens": 1500,
-      "output_tokens": 800,
-      "duration_seconds": 45.2,
-      "cost_usd": "0.039",
-      "started_at": "2026-03-18T10:00:00Z",
-      "completed_at": "2026-03-18T10:00:45Z"
-    },
-    {
-      "phase_id": "implement",
-      "name": "Implementation",
-      "status": "running",
-      "session_id": "sess-222",
-      "started_at": "2026-03-18T10:00:46Z"
-    }
-  ],
-  "total_input_tokens": 1500,
-  "total_output_tokens": 800,
-  "total_tokens": 2300,
-  "total_cost_usd": "0.039",
-  "total_duration_seconds": 45.2,
-  "artifact_ids": ["art-aaa"]
-}
-```
-
-### API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/executions` | List all executions (filter: `status`, paginated) |
-| `GET` | `/executions/{id}` | Full execution detail with phases |
-| `POST` | `/workflows/{id}/execute` | Start new execution |
-| `GET` | `/executions/{id}/state` | Current execution state |
-
-## Control Plane
-
-Control a running execution via HTTP or WebSocket.
-
-### Pause / Resume
-
-```bash
-# Pause (graceful — waits for current tool to finish)
-uv run --package syn-cli syn control pause <execution-id> --reason "Reviewing intermediate results"
-
-# Via API
-curl -X POST http://localhost:8137/executions/<execution-id>/pause \
-  -d '{"reason": "Reviewing intermediate results"}'
-
-# Resume
-uv run --package syn-cli syn control resume <execution-id>
-
-# Via API
-curl -X POST http://localhost:8137/executions/<execution-id>/resume
-```
-
-### Cancel
-
-```bash
-# Cancel (stops execution, marks as cancelled)
-uv run --package syn-cli syn control cancel <execution-id> --reason "Wrong workflow template"
-
-# Via API
-curl -X POST http://localhost:8137/executions/<execution-id>/cancel \
-  -d '{"reason": "Wrong workflow template"}'
-```
-
-### Interrupt (SIGINT)
-
-```bash
-# Interrupt (preserves partial state, like Ctrl+C)
-uv run --package syn-cli syn control interrupt <execution-id>
-```
+Use pause when you want to inspect artifacts from completed phases before proceeding. The execution stays alive; all state is preserved.
 
 ### Inject Context
 
-Send additional context or instructions to a running agent:
+Send additional instructions to the running agent without stopping it:
 
 ```bash
-# Via API — inject a user message
-curl -X POST http://localhost:8137/executions/<execution-id>/inject \
-  -d '{"message": "Focus on the auth middleware, not the database layer", "role": "user"}'
-
-# System-level injection
-curl -X POST http://localhost:8137/executions/<execution-id>/inject \
-  -d '{"message": "Budget limit approaching, wrap up current phase", "role": "system"}'
+curl -X POST http://localhost:8137/api/v1/executions/<id>/inject \
+  -d '{"message": "Focus only on the auth module, skip database changes", "role": "user"}'
 ```
 
-### WebSocket Control
+Inject when the agent is heading in the wrong direction and you want to steer it without restarting. Use `"role": "system"` for budget or constraint warnings.
 
-For real-time bidirectional control:
+### Cancel
 
-```
-ws://localhost:8137/ws/control/<execution-id>
-```
-
-## Execution Statuses
-
-| Status | Description |
-|--------|-------------|
-| `NOT_STARTED` | Created but not yet running |
-| `RUNNING` | Actively executing phases |
-| `PAUSED` | Temporarily halted (resumable) |
-| `COMPLETED` | All phases finished successfully |
-| `FAILED` | A phase failed (see `error_message`) |
-| `CANCELLED` | Manually cancelled by user |
-| `INTERRUPTED` | SIGINT with partial state preserved |
-
-### Phase Statuses
-
-| Status | Description |
-|--------|-------------|
-| `PENDING` | Not yet started |
-| `RUNNING` | Currently executing |
-| `COMPLETED` | Finished successfully |
-| `FAILED` | Failed (see error) |
-| `SKIPPED` | Skipped (e.g., after cancel) |
-
-## How Execution Works Internally
-
-The system uses the **Processor To-Do List** pattern for crash-resilient multi-phase execution:
-
-```
-Start Execution
-  → WorkflowExecutionAggregate emits WorkflowExecutionStartedEvent
-  → ExecutionTodoProjection queues: PROVISION_WORKSPACE for phase 1
-
-Phase Loop:
-  1. PROVISION_WORKSPACE
-     → WorkspaceProvisionHandler creates Docker container
-     → Injects tokens via Envoy sidecar proxy
-     → Aggregate emits WorkspaceProvisionedForPhaseEvent
-     → Todo: EXECUTE_AGENT
-
-  2. EXECUTE_AGENT
-     → AgentExecutionHandler runs Claude CLI in container
-     → Captures JSONL output (tokens, tool calls, errors)
-     → Aggregate emits AgentExecutionCompletedEvent
-     → Todo: COLLECT_ARTIFACTS
-
-  3. COLLECT_ARTIFACTS
-     → ArtifactCollectionHandler saves outputs to MinIO
-     → Aggregate emits ArtifactsCollectedForPhaseEvent
-     → Aggregate checks phase_order_map for next phase
-     → If next phase exists: emits NextPhaseReadyEvent → loop back to step 1
-     → If no more phases: emits WorkflowCompletedEvent → done
-```
-
-**Key properties:**
-- **Crash-resilient**: If the processor crashes, the to-do list persists. On restart, it picks up from the last completed step.
-- **Aggregate is the decision-maker**: The aggregate decides "what's next" — never the processor.
-- **Handlers are idempotent**: Re-running a handler (after crash) is safe.
-
-## Troubleshooting Failed Executions
-
-### 1. Check execution detail
+Cancel is permanent; it stops the execution and marks phases as SKIPPED:
 
 ```bash
-curl -s http://localhost:8137/executions/<execution-id> | python -m json.tool
+syn control cancel <execution-id> --reason "wrong workflow template used"
 ```
 
-Look at:
-- `status`: Should tell you the overall state
-- `phases[].status`: Which phase failed
-- `phases[].error_message`: Why it failed
-- `phases[].session_id`: Session to investigate
+## Troubleshooting a Failed Execution: 4 Steps
 
-### 2. Check the agent session
+**Step 1: Get the execution detail.** Run `syn control status <execution-id>` or `curl -sf http://localhost:8137/api/v1/executions/<id>`. Find which phase has `status: failed` and read its `error_message`.
 
-```bash
-uv run --package syn-cli syn sessions show <session-id>
-uv run --package syn-cli syn observe tools <session-id>
-uv run --package syn-cli syn observe errors <session-id>
-```
+**Step 2: Check the failing phase's session.** Each phase has a `session_id`. Run `syn sessions show <session-id>` to see the operations timeline: what the agent was doing when it failed.
 
-### 3. Check workspace logs
+**Step 3: Check the tool timeline.** Run `syn observe tools <session-id>` (or `/syn-insights tools <session-id>`). Look for `TOOL_BLOCKED` events or tools that returned errors. This tells you *what* the agent was trying to do.
 
-If the workspace is still alive:
-```bash
-docker logs <container-id>
-```
+**Step 4: Check token metrics.** Run `syn observe tokens <session-id>`. If input tokens spiked, the context window may have been overwhelmed. If the session ended abruptly, it may have hit the phase `timeout_seconds`.
 
-### 4. Common failure reasons
+### Common Failures
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| Phase stuck in RUNNING | Agent timed out | Check `timeout_seconds` in phase config |
-| FAILED with token error | Budget exceeded | Increase `max_budget_usd` or reduce scope |
-| FAILED immediately | Workspace provision failed | Check Docker, rebuild image with `just workspace-build` |
-| FAILED with tool error | Blocked tool | Check `allowed_tools` in phase config |
+| Phase stuck RUNNING | Timeout exceeded | Increase `timeout_seconds` in phase config |
+| FAILED with budget error | `max_budget_usd` hit | Increase budget or reduce scope |
+| FAILED immediately | Workspace provision failed | `just workspace-build` to rebuild image |
+| TOOL_BLOCKED in tool timeline | Tool not in `allowed_tools` | Add tool to phase config |
 
-## Execution Metrics
+## Escalation Point
 
-After completion, each execution has aggregated metrics:
+If an execution fails 3 times with the same error pattern, **stop re-running and reassess the workflow design.** A repeated failure is a signal that the phase config is wrong (wrong model, insufficient budget, blocked tools), not that the agent needs another chance.
 
-```json
-{
-  "total_phases": 3,
-  "completed_phases": 3,
-  "total_input_tokens": 15000,
-  "total_output_tokens": 8000,
-  "total_tokens": 23000,
-  "total_cost_usd": "0.39",
-  "total_duration_seconds": 180.5,
-  "artifact_ids": ["art-1", "art-2", "art-3"]
-}
-```
+## Integration
 
-Use `/syn-costs` or `/syn-metrics` to view aggregated cost and performance data across executions.
+Design the template with workflow-management, run and control here, then analyze costs and patterns with the observability skill. Use `/syn-control` for interactive control from Claude Code.

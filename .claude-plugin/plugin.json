@@ -1,6 +1,6 @@
 {
   "name": "syntropic137",
-  "version": "0.5.1",
+  "version": "0.11.3",
   "description": "Syntropic137 Agentic Engineering Platform plugin",
   "author": { "name": "Syntropic137" },
   "homepage": "https://github.com/syntropic137/syntropic137",
@@ -8,6 +8,5 @@
   "license": "MIT",
   "keywords": ["ai-agents", "orchestration", "observability", "workflows", "devops"],
   "commands": "./commands/",
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }
