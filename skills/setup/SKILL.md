@@ -63,7 +63,7 @@ Two files are kept separate to isolate application config from infrastructure co
 
 **Root `.env`** (application): `ANTHROPIC_API_KEY`, `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`, `APP_ENVIRONMENT`
 
-**`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_PUBLIC_HOSTNAME`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`, `SYN_API_PASSWORD` (selfhost basic-auth password for the gateway, gates the LAN and global tiers, see ADR-059)
+**`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_PUBLIC_HOSTNAME`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`, `SYN_API_PASSWORD` (selfhost basic-auth password for the gateway, gates the LAN and global tiers; see ADR-059 in the parent Syntropic137 repository's ADR documentation)
 
 Run `just dev-doctor` to diagnose env var issues.
 
