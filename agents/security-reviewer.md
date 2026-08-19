@@ -90,11 +90,16 @@ Present findings as:
 |---|----------|----------|------|--------|
 | 1 | ... | ... | ... | ... |
 
-### Tool Access Matrix
+### Declared vs Actual Behaviour
 
-| Workflow | Phase | Tools | Assessment |
-|----------|-------|-------|------------|
-| ... | ... | ... | OK / Overly broad / Justified |
+Do NOT grade tool declarations as "overly broad" or "justified" - they are not
+enforced, so every row would grade the same real access. Report only where a
+declaration DISAGREES with what the phase prompt instructs, which is a signal
+about the author, not a control.
+
+| Workflow | Phase | Declares | Prompt actually instructs | Mismatch? |
+|----------|-------|----------|---------------------------|-----------|
+| ... | ... | `read` | edits files, runs bash | YES |
 
 ### Verdict
 

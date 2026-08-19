@@ -100,7 +100,7 @@ syn control cancel <execution-id> --reason "wrong workflow template used"
 | Phase stuck RUNNING | Timeout exceeded | Increase `timeout_seconds` in phase config |
 | FAILED with budget error | `max_budget_usd` hit | Increase budget or reduce scope |
 | FAILED immediately | Workspace provision failed | `just workspace-build` to rebuild image |
-| TOOL_BLOCKED in tool timeline | Tool not in `allowed_tools` | Add tool to phase config |
+| TOOL_BLOCKED in tool timeline | A safety validator blocked the call | Read the block reason on the event; `allowed_tools` is not enforced and editing it changes nothing |
 
 ## Escalation Point
 
