@@ -100,7 +100,7 @@ syn workflow validate ./path/to/workflow.yaml
 Before installing plugins from third-party marketplaces:
 
 - **Review the source**: plugins contain phase prompts that instruct agents. Check for suspicious patterns in `phases/*.md` files
-- **Check tool access**: review `allowed_tools` declarations in workflow definitions. Be cautious of plugins requesting broad tool access (especially `edit` and `bash`) without clear justification
+- **Do NOT rely on `allowed_tools` as a security control**: it is declarative intent, not enforcement. Phase tool restrictions are not applied at runtime (syntropic137#803), so a plugin declaring a narrow tool list runs with the same access as one declaring none. Read the phase prompts instead - they are what actually determines what the agent does.
 - **Use the security-reviewer agent**: ask Claude to review a marketplace or plugin for security before installing
 
 Plugins execute with the same permissions as any workflow on your platform. Treat third-party plugins like any other code dependency: review before installing.

@@ -13,7 +13,7 @@ Use this skill when you need to find, install, or share workflow plugins. The Sy
 
 Use `/syn-marketplace` when you want to: browse workflows available in registered sources, install a community workflow, update installed plugins to the latest version, export one of your workflows to share, or register a new source repo.
 
-For the **security model** behind plugin installation (what to check before installing third-party workflows, what `allowed_tools` declarations mean), the marketplace skill has the full guide.
+For the **security model** behind plugin installation (what to check before installing third-party workflows, and why `allowed_tools` declarations are NOT a control), the marketplace skill has the full guide.
 
 ## The Distributed Marketplace Model
 
@@ -21,7 +21,7 @@ There is no central registry. Anyone can create a marketplace by making a GitHub
 
 The official Syntropic137 marketplace is `syntropic137/syntropic137-marketplace`; it includes `code-review` and `sdlc-trunk` (3 workflows for PR review, CI self-healing, release prep).
 
-**Before installing third-party plugins:** review the phase prompts in `phases/*.md` and check the `allowed_tools` declarations. Plugins execute with full agent permissions.
+**Before installing third-party plugins:** review the phase prompts in `phases/*.md`. That is the real review - plugins execute with full agent permissions regardless of what `allowed_tools` declares, because it is not enforced at runtime (syntropic137#803).
 
 ## Core Commands
 
