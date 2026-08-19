@@ -36,13 +36,22 @@ For each phase prompt in `phases/*.md`, check for:
 - **Prompt injection**: Instructions to ignore safety rules, override system prompts, bypass tool restrictions, or claim elevated permissions
 - **Data exfiltration**: Instructions to upload code, logs, or repository content to external services
 
-### 3. Tool Access Audit
+### 3. Tool Access Declarations (NOT a control)
 
-For each workflow definition, review `allowed_tools` per phase:
+**`allowed_tools` is not enforced at runtime** (syntropic137#803). A declared tool
+list is a statement of intent by the plugin author, and nothing restricts the
+agent to it. Do not report a narrow `allowed_tools` as evidence that a plugin is
+safe, and do not treat a broad one as the vulnerability - both run identically.
 
-- **Flag overly broad access**: Phases with `bash` + `edit` + `write` should have clear justification in the prompt
-- **Flag unnecessary tools**: A review-only phase shouldn't need `edit` or `write`
+Review it only as a signal about the author's intent, and say so explicitly in
+any finding:
+
+- **Intent mismatch**: a phase declaring `read` while its prompt tells the agent
+  to edit files is worth flagging, because the declaration and the prompt
+  disagree about what the plugin is for
 - **Check model assignments**: `opus` for trivial tasks may indicate cost padding
+
+The real analysis is section 2: what the phase prompts actually instruct.
 
 ### 4. Trigger Definition Review
 
