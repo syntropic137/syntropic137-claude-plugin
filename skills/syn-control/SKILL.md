@@ -30,8 +30,8 @@ PAUSED   → cancel → CANCELLED
 ## Commands
 
 ```bash
-syn control list                             # all executions
-syn control list --status running            # filter: running, paused, failed, completed
+syn execution list                             # all executions
+syn execution list --status running            # filter: running, paused, failed, completed
 syn control status <execution-id>            # detailed phase breakdown
 syn control pause <execution-id>
 syn control pause <execution-id> --reason "reviewing phase 2 output"
@@ -48,7 +48,7 @@ curl http://localhost:8137/api/v1/executions?status=running
 ## Common Scenarios
 
 **"I want to check what's running right now."**
-`syn control list --status running` shows execution IDs, workflow names, and start times.
+`syn execution list --status running` shows execution IDs, workflow names, and start times.
 
 **"A workflow is analyzing the wrong area and I want to redirect it without restarting."**
 1. `syn control pause <id>` (waits for the current tool call to finish)
@@ -64,7 +64,7 @@ curl http://localhost:8137/api/v1/executions?status=running
 ## Finding Execution IDs
 
 If you don't have the ID:
-- `syn control list` for recent executions with IDs
+- `syn execution list` for recent executions with IDs
 - `/syn-insights sessions` (sessions map 1:1 to execution phases)
 
 ## Errors
