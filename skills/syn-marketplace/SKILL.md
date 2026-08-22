@@ -42,13 +42,13 @@ syn workflow info code-review            # details before installing
 syn workflow install code-review
 syn workflow install github.com/yourorg/your-plugin   # direct from URL
 syn workflow install ./path/to/plugin                  # local path (dev)
-syn workflow installed                   # what's installed
+syn workflow packages                   # what's installed
 syn workflow update code-review          # update to latest
 syn workflow uninstall code-review
 
 # Exporting
-syn marketplace export <workflow-id>
-syn marketplace export <workflow-id> --output ./workflow.yaml
+syn workflow export <workflow-id>
+syn workflow export <workflow-id> --output ./workflow.yaml
 ```
 
 ## Common Scenarios
@@ -61,13 +61,13 @@ syn marketplace export <workflow-id> --output ./workflow.yaml
 5. Set up trigger rules: see `/syn-triggers`
 
 **"I built a workflow and want to share it with my team."**
-1. `syn marketplace export <workflow-id> --output ./my-workflow.yaml`
+1. `syn workflow export <workflow-id> --output ./my-workflow.yaml`
 2. Add the YAML to a `workflows/` directory in a GitHub repo
 3. Push the repo
 4. Team members: `syn marketplace add yourorg/your-repo` → `syn workflow install my-workflow`
 
 **"I want to check what's installed before running anything."**
-`syn workflow installed` lists all installed plugin workflows with their source.
+`syn workflow packages` lists workflow packages pulled from the marketplace, with their source. It reads LOCAL CLI history (~/.syntropic137/workflows/installed.json), not the running stack - use `syn workflow list` for what is actually on the stack.
 
 ## Errors
 

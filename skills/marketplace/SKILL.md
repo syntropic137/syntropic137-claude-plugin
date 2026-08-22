@@ -63,7 +63,7 @@ syn workflow install github.com/yourorg/your-plugin
 syn workflow install ./path/to/plugin
 
 # List installed plugins
-syn workflow installed
+syn workflow packages
 
 # Update an installed plugin
 syn workflow update code-review
@@ -142,7 +142,7 @@ syn workflow list    # Verify: 4 workflows created
 ### "What plugins do I have installed?"
 
 ```bash
-syn workflow installed
+syn workflow packages
 ```
 
 ### "Remove a plugin I no longer need"

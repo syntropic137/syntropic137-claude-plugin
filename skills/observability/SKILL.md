@@ -68,7 +68,7 @@ Summary across all sessions: `syn costs summary`
 
 Per session: `syn costs session <session-id>`
 
-Per workflow execution (all phases aggregated): `syn costs workflow <workflow-id>`
+Per workflow execution (all phases aggregated): `syn costs execution <workflow-id>`
 
 The `SessionCost` projection breaks down cost by model and by tool; `cost_by_tool` shows which tools consumed the most tokens. `Bash` is typically the most expensive (long outputs), `Read` is the most-called.
 
