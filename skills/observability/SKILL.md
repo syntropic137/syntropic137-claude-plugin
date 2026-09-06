@@ -76,7 +76,7 @@ The `SessionCost` projection breaks down cost by model and by tool; `cost_by_too
 
 Default pricing: input $0.01/1K tokens, output $0.03/1K tokens (configurable).
 
-**A codex phase that declared no `model` comes back UNPRICED.** Codex does not report its model on the wire, so the platform has nothing to price against and records no cost rather than a wrong one. If a phase is missing from a cost breakdown, check whether its `agent.model` is set in the workflow YAML.
+**A codex phase that declared no `model` comes back UNPRICED.** Codex does not report its model on the wire, so the platform has nothing to price against and records no dollar cost rather than a wrong one. The phase does not disappear: its tokens are still counted, under `unpriced_tokens`, and `vendor_cost_usd` is null. The symptom is real token usage with no dollar figure, and a cost total that is short.
 
 ## Answering the Common Questions
 
