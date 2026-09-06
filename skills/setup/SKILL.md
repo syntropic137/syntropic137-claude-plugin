@@ -71,7 +71,7 @@ Agent credentials are per harness, and a workflow picks its harness per phase:
 | `CLAUDE_CODE_OAUTH_TOKEN` | phases running on `provider: claude`, subscription auth |
 | `CODEX_AUTH_JSON` | phases running on `provider: codex`. Without it, a codex phase fails to provision |
 
-You only need the credentials for the harnesses your workflows actually name. A stack that runs claude phases only does not need `CODEX_AUTH_JSON`, and the reverse holds too.
+You need credentials for every harness your workflows can reach. That is usually the harnesses your phases name, but a phase with `allow_delegation: true` can hand work to the other harness, and provisioning stages both credentials for it. A claude phase that may delegate to codex still needs `CODEX_AUTH_JSON`, and the reverse holds too.
 
 **`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_PUBLIC_HOSTNAME`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`, `SYN_API_PASSWORD` (selfhost basic-auth password for the gateway, gates the LAN and global tiers; see ADR-059 in the parent Syntropic137 repository's ADR documentation)
 

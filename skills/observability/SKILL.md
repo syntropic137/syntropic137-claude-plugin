@@ -97,8 +97,9 @@ Check `tokens_by_tool` in the cost breakdown. Cross-reference with the tool time
 
 ```
 Agent (claude -p or codex exec, in Docker)
-  → writes .agentic/analytics/events.jsonl
-  → HookWatcher (file watcher)
+  claude: writes .agentic/analytics/events.jsonl → HookWatcher (file watcher)
+  codex:  emits codex exec --json on stdout → CodexStreamProcessor
+  both converge on the collector below
   → Collector (POST /events, port 8080)
   → TimescaleDB (observability hypertable)
   → Projections: SessionList, SessionCost, TokenMetrics, ToolTimeline

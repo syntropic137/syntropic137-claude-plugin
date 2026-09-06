@@ -50,7 +50,7 @@ any finding:
   to edit files is worth flagging, because the declaration and the prompt
   disagree about what the plugin is for
 - **Check model assignments**: the top-tier model for a trivial task may indicate cost padding. On claude phases that is `opus`, on codex phases it is whichever concrete model id is named
-- **Check harness declarations**: a `provider: codex` phase with no `model` runs unpriced, so its cost never appears in reports. Flag it. A `provider: codex` phase carrying `allowed_tools` is rejected at authoring time, so flag that too
+- **Check harness declarations**: a `provider: codex` phase with no `model` runs unpriced, so its tokens are counted but its dollar cost never appears in reports. Flag it. Do not flag `allowed_tools` on a codex phase as a rejection, it is inert on both harnesses like every other tool list
 
 The real analysis is section 2: what the phase prompts actually instruct.
 

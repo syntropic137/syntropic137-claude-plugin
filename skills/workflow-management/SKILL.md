@@ -128,9 +128,9 @@ See `workflow-management` skill for full YAML schema reference including `allowe
 
 **Every phase using the most capable model.** Costs scale fast with `opus` on claude phases, and with the top-tier model on codex phases. Audit your per-phase model assignments whenever a workflow runs expensive.
 
-**A codex phase with no `model`.** It runs, and it reports no cost at all, so the expensive phase is invisible in `syn costs`. Always name a concrete model id on codex phases.
+**A codex phase with no `model`.** It runs, and it reports no dollar cost, so the phase lands in `unpriced_tokens` rather than in your cost total. The spend is real and your reported total is short. Always name a concrete model id on codex phases.
 
-**`allowed_tools` on a codex phase.** This is rejected at authoring time, not silently ignored. Either remove it or set that phase's `provider` to `claude`.
+**Treating `allowed_tools` as a control.** Per ADR-069 the platform never populates it, so it restricts nothing on either harness and syntropic137#803 tracks the gap. Declare it to document intent. To actually bound a phase, put it on `codex` and set `sandbox: read-only`.
 
 **Missing `input_declarations` for inputs used in prompts.** If `{{repository}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
 
