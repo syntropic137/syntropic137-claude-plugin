@@ -83,7 +83,7 @@ Each workflow phase gets its own isolated workspace. Rebuild the image when tool
 Event Store (port 50051) is a Rust gRPC service that depends on TimescaleDB. If TimescaleDB starts slow, Event Store will fail to connect on boot. Fix: `just dev-stop && just dev` (restart after DB is healthy).
 
 **Stale workspace image:**
-Agents fail with missing tools or old Claude CLI version. Fix: `just workspace-build`. On Apple Silicon, allow 5-10 min for the Rust components.
+Agents fail with missing tools, or with an old `claude` or `codex` CLI version baked into the image. Fix: `just workspace-build`. On Apple Silicon, allow 5-10 min for the Rust components.
 
 **Database issues:**
 `just dev-stop && just dev` for soft restart. If tables are corrupted: `just dev-down` destroys volumes and you'll lose local data.

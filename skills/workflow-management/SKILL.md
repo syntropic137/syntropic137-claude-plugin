@@ -15,20 +15,24 @@ Use this when you are: designing a new workflow template, debugging unexpected p
 
 Not needed when you just want to **run** an existing workflow; use the execution-control skill instead. Not needed when you want to list or inspect already-registered workflows; use `/syn-workflow` for that.
 
-## Phases Are Claude Code Sessions
+## Phases Are Headless Agent Sessions
 
-Each workflow phase is a full Claude CLI invocation. That means phase prompts can invoke any slash command (`/syn-*`, `/commit`, `/review`, etc.) and any installed skill directly by name. When designing a phase prompt, consult the Claude Code commands and skills references to know what's available:
+Each workflow phase is one headless agent invocation. Which harness runs it is chosen **per phase** in the workflow YAML `agent` block: `provider: claude` runs `claude -p`, `provider: codex` runs `codex exec`. Claude is the default when no `agent` block is present.
+
+On a **claude** phase, the prompt can invoke any slash command (`/syn-*`, `/commit`, `/review`, etc.) and any installed skill directly by name. When designing one, consult the Claude Code commands and skills references to know what's available:
 
 - Commands: https://code.claude.com/docs/en/commands.md
 - Skills: https://code.claude.com/docs/en/skills.md
 
-Write phase prompts the same way you'd write instructions to Claude Code in a terminal session.
+Write a claude phase prompt the same way you'd write instructions to Claude Code in a terminal session.
+
+On a **codex** phase, write the prompt as plain instructions. Slash commands, Claude plugins, hook events, subagent tracking, and TodoWrite are Claude-only, so a codex phase gets none of them. Anything a phase prompt needs from that list is a reason to keep the phase on claude.
 
 ## The Core Model: Templates vs Executions
 
 A **workflow template** is a reusable definition (like a class). A **workflow execution** is a running instance (like an object). One template can have many concurrent executions with different tasks, repos, and inputs.
 
-Templates define **phases**: each phase is one Claude CLI invocation in its own workspace. Phases run sequentially by default; outputs from phase N feed into phase N+1 via `{{phase-id}}` substitution.
+Templates define **phases**: each phase is one headless agent invocation in its own workspace, on whichever harness that phase declares. Phases run sequentially by default, and outputs from phase N feed into phase N+1 via `{{phase-id}}` substitution.
 
 **Phase workspaces are ephemeral.** Each phase starts in a fresh Docker container: no git branches, staged files, commits, or file changes from a prior phase carry over. The only thing that crosses a phase boundary is the artifact output. If a phase needs to do git work (commit, push, `gh pr create`), it must do so in the same phase that made the changes. If a later phase needs those changes, either collapse the phases or have the earlier phase output a patch/diff artifact that the later phase applies.
 
@@ -73,15 +77,37 @@ Each phase's `prompt_template` can reference:
 
 Phase outputs chain forward automatically. Keep the substitution chain explicit: if phase 3 needs phase 1's output, reference `{{phase-1-id}}` directly rather than relying on phase 2 to pass it through.
 
-### 4. Right-size the model per phase
+### 4. Choose the harness, then right-size the model per phase
 
-Use cheaper models for read-only, exploratory phases; use more capable models where reasoning depth matters:
+Harness selection lives in the workflow YAML, per phase. There is no CLI flag and no environment variable for it:
 
-- **haiku**: reading files, formatting output, simple classification
-- **sonnet**: most phases, balanced cost/capability
-- **opus**: complex implementation, architecture decisions, deep analysis
+```yaml
+phases:
+  - id: implement
+    agent:
+      provider: claude          # claude | codex, claude is the default
+      model: sonnet
+  - id: review
+    agent:
+      provider: codex           # a different model reviews the work
+      model: gpt-5.6-sol        # name a concrete model, see below
+      sandbox: read-only        # codex honours this, claude does not
+```
 
-A well-designed RIPER-5 workflow might use sonnet for Research, opus for Innovate and Plan, opus for Execute, sonnet for Review.
+Rules that bite:
+
+- **Codex phases need `CODEX_AUTH_JSON`** set in the platform `.env`. Without it, a phase declaring `provider: codex` fails to provision.
+- **Name a concrete model id on every codex phase.** Codex does not report its model on the wire, so omitting `model` leaves the run **unpriced**: no cost lands in `syn costs` for that phase.
+- **`allowed_tools` on a codex phase raises an error** at authoring time. Codex enforces a filesystem sandbox, not a tool vocabulary. Drop the tool list, or move the phase to claude.
+- **`sandbox` constrains codex only** today. The levels are `read-only`, `workspace-write`, and `full-access`. Declaring `read-only` on a claude phase does not restrict it, so do not read it as a guarantee there.
+- **Claude-only features**: hook events, subagent tracking, TodoWrite, and Claude plugins. A phase that depends on any of them must run on claude.
+
+The tier idea, a cheap model for shallow work and a capable model where reasoning depth matters, applies on both harnesses. Only the names differ:
+
+- **claude phases** take Anthropic tier aliases. `haiku` for reading files, formatting output, simple classification. `sonnet` for most phases, balanced cost and capability. `opus` for complex implementation, architecture decisions, deep analysis.
+- **codex phases** take a concrete OpenAI model id. There is no tier alias to fall back on, and leaving `model` out costs you the pricing data rather than saving money.
+
+A well-designed RIPER-5 workflow might run claude/sonnet for Research, claude/opus for Innovate and Plan, claude/opus for Execute, and a codex Review phase with a named model and `sandbox: read-only` so the verifier cannot modify what it certifies.
 
 ## Creating a Workflow
 
@@ -100,7 +126,11 @@ See `workflow-management` skill for full YAML schema reference including `allowe
 
 **Phases referencing wrong substitution keys.** If phase 3 uses `{{phase_2}}` but phase 2's `phase_id` is `analyze`, the substitution silently fails. Always match `{{phase-id}}` exactly to the `phase_id` field.
 
-**Every phase using opus.** Costs scale fast with opus. Audit your model assignments whenever a workflow runs expensive.
+**Every phase using the most capable model.** Costs scale fast with `opus` on claude phases, and with the top-tier model on codex phases. Audit your per-phase model assignments whenever a workflow runs expensive.
+
+**A codex phase with no `model`.** It runs, and it reports no cost at all, so the expensive phase is invisible in `syn costs`. Always name a concrete model id on codex phases.
+
+**`allowed_tools` on a codex phase.** This is rejected at authoring time, not silently ignored. Either remove it or set that phase's `provider` to `claude`.
 
 **Missing `input_declarations` for inputs used in prompts.** If `{{repository}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
 

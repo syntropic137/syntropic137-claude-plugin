@@ -32,7 +32,9 @@ Query: GET /sessions/{id}                  Query: GET /observability/sessions/{i
 
 ## Sessions: What They Are
 
-One `AgentSession` = one Claude CLI invocation in one workspace. A 3-phase workflow creates 3 sessions. Sessions are linked to their execution via `execution_id` and to their workflow via `workflow_id`.
+One `AgentSession` = one headless agent invocation in one workspace. That invocation is `claude -p` or `codex exec`, depending on the `agent.provider` the phase declared. A 3-phase workflow creates 3 sessions, and a single workflow can mix harnesses across its phases. Sessions are linked to their execution via `execution_id` and to their workflow via `workflow_id`.
+
+**Telemetry depth is not equal across harnesses.** Hook events, subagent tracking, and TodoWrite are Claude-only, so a codex session's timeline is thinner by construction. A sparse timeline on a codex phase is expected, not a sign of failure.
 
 List sessions: `syn sessions list`, optionally filtered with `--workflow <id>` or `--status running`.
 
@@ -74,10 +76,12 @@ The `SessionCost` projection breaks down cost by model and by tool; `cost_by_too
 
 Default pricing: input $0.01/1K tokens, output $0.03/1K tokens (configurable).
 
+**A codex phase that declared no `model` comes back UNPRICED.** Codex does not report its model on the wire, so the platform has nothing to price against and records no cost rather than a wrong one. If a phase is missing from a cost breakdown, check whether its `agent.model` is set in the workflow YAML.
+
 ## Answering the Common Questions
 
 **"Why was this session expensive?"**
-1. Check `cost_by_model`: was an expensive model (opus) used where sonnet would do?
+1. Check `cost_by_model`: on a claude phase, was `opus` used where `sonnet` would do? On a codex phase, was the top-tier model used for shallow work?
 2. Check `tokens_by_tool`: is `Bash` or `Read` dominating? Large command outputs or full file reads accumulate fast.
 3. Check `cache_read_tokens`: low cache hits mean repeated context loading across turns.
 
@@ -92,7 +96,7 @@ Check `tokens_by_tool` in the cost breakdown. Cross-reference with the tool time
 ## Event Pipeline (How Data Flows)
 
 ```
-Agent (Claude CLI in Docker)
+Agent (claude -p or codex exec, in Docker)
   → writes .agentic/analytics/events.jsonl
   → HookWatcher (file watcher)
   → Collector (POST /events, port 8080)
