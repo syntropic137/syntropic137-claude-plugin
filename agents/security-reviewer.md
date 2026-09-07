@@ -49,7 +49,8 @@ any finding:
 - **Intent mismatch**: a phase declaring `read` while its prompt tells the agent
   to edit files is worth flagging, because the declaration and the prompt
   disagree about what the plugin is for
-- **Check model assignments**: `opus` for trivial tasks may indicate cost padding
+- **Check model assignments**: the top-tier model for a trivial task may indicate cost padding. On claude phases that is `opus`, on codex phases it is whichever concrete model id is named
+- **Check harness declarations**: a `provider: codex` phase with no `model` runs unpriced, so its tokens are counted but its dollar cost never appears in reports. Flag it. Do not flag `allowed_tools` on a codex phase as a rejection, it is inert on both harnesses like every other tool list
 
 The real analysis is section 2: what the phase prompts actually instruct.
 

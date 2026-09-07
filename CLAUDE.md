@@ -69,7 +69,11 @@ When authoring workflow phases, skills, or commands, reference the official Clau
 - Commands reference: https://code.claude.com/docs/en/commands.md
 - Skills reference: https://code.claude.com/docs/en/skills.md
 
-Each Syntropic137 workflow phase is a Claude CLI invocation. Phase prompts can invoke slash commands and skills directly. Workflow authors should be familiar with what commands and skills are available.
+Each Syntropic137 workflow phase is one headless agent invocation, on the harness that phase declares in its workflow YAML `agent` block: `provider: claude` (`claude -p`) or `provider: codex` (`codex exec`). Claude is the default when no `agent` block is present.
+
+The docs above apply to **claude phases**, whose prompts can invoke slash commands and skills directly. Codex phases cannot invoke slash commands or Claude plugins, so write their prompts as plain instructions. Skills are the exception: the pinned `skills` CLI installs them per harness, so a codex phase can use installed skills.
+
+This repo is itself a Claude Code plugin. Its own commands, skills, and `model:` frontmatter are Claude Code features and are correctly Claude-specific. Only the description of the *platform runtime* is multi-harness.
 
 ## Writing Style
 

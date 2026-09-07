@@ -75,7 +75,9 @@ If the session ended abruptly without a clear tool error, budget or context exha
 | Phase fails immediately | `TOOL_BLOCKED`: a safety validator blocked the call | Read the block reason on the event; `allowed_tools` is not the cause and editing it changes nothing |
 | Phase fails on `Bash` | Command hangs or returns error | Check the bash command in the prompt; add `timeout` or restrict the command |
 | Phase times out | `timeout_seconds` too low for the task | Increase `timeout_seconds` in the phase definition |
-| Budget exhausted | Cost hit `max_budget_usd` | Increase budget or reduce phase scope; use haiku for cheaper phases |
+| Budget exhausted | Cost hit `max_budget_usd` | Increase budget or reduce phase scope, or drop shallow phases to a cheaper model for their harness (`haiku` on claude, a smaller named model on codex) |
+| Codex phase fails to provision | `CODEX_AUTH_JSON` missing from the platform `.env` | Set it, then restart the stack. Every `provider: codex` phase needs it |
+| A phase shows tokens but no dollar cost | Codex phase with no `agent.model` | Codex does not report its model on the wire, so the run is unpriced and its tokens land under `unpriced_tokens`. Name a concrete model id in the workflow YAML |
 | Workspace provision fails | Docker image missing or corrupt | `just workspace-build` to rebuild; check Docker disk space |
 | Agent loops on same calls | Previous phase output was unexpected format | Inspect the artifact from the previous phase; revise its prompt to produce cleaner output |
 | Context window hit | Too much input in a single turn | Restructure prompts to load targeted files rather than scanning broadly |

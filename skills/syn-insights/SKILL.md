@@ -17,7 +17,7 @@ For the **conceptual model** behind sessions, cost projections, and the two-lane
 
 ## Sessions
 
-A session = one Claude CLI invocation in one workspace. A 3-phase workflow creates 3 sessions.
+A session = one headless agent invocation in one workspace, `claude -p` or `codex exec` depending on the phase's declared `agent.provider`. A 3-phase workflow creates 3 sessions, and one workflow can mix harnesses across phases.
 
 ```bash
 syn sessions list                              # all sessions
@@ -45,7 +45,9 @@ syn costs session <session-id>         # cost breakdown for one session
 syn costs execution <execution-id>     # cost aggregated across all phases
 ```
 
-The breakdown includes `cost_by_model` and `cost_by_tool`; these tell you whether opus usage or expensive tool calls (like `Bash`) drove the cost.
+The breakdown includes `cost_by_model` and `cost_by_tool`. These tell you whether an expensive model or expensive tool calls (like `Bash`) drove the cost. On claude phases that usually means `opus` where `sonnet` would do.
+
+A codex phase whose workflow YAML declares no `agent.model` shows up **unpriced**: codex does not report its model on the wire, so the platform records no dollar cost for it. Its tokens are still counted, under `unpriced_tokens`, so the symptom is a phase with real token usage and no dollar figure, not a phase that vanishes.
 
 ## Tool Call Timeline
 
