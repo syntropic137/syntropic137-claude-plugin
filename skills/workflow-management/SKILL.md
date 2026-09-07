@@ -98,7 +98,7 @@ Rules that bite:
 
 - **Codex phases need `CODEX_AUTH_JSON`** set in the platform `.env`. Without it, a phase declaring `provider: codex` fails to provision.
 - **Name a concrete model id on every codex phase.** Codex does not report its model on the wire, so omitting `model` leaves the run **unpriced**: no cost lands in `syn costs` for that phase.
-- **`allowed_tools` restricts nothing on either harness.** Per ADR-069 the platform never populates it, so no tool policy is applied and the codex-side guard is unreachable. Declare it to document intent. To bound a phase, put it on codex and set `sandbox`.
+- **`allowed_tools` restricts nothing on either harness.** Per ADR-069 the platform never populates it, so no tool policy is applied and the codex-side guard is unreachable. Declare it to document intent. To bound a phase, put it on codex and set `sandbox`, which limits filesystem writes only: network egress is available at every level, and a phase publishing under `artifacts/output/` needs `full-access`.
 - **`sandbox` constrains codex only** today. The levels are `read-only`, `workspace-write`, and `full-access`. Declaring `read-only` on a claude phase does not restrict it, so do not read it as a guarantee there.
 - **Claude-only features**: hook events, subagent tracking, TodoWrite, and Claude plugins. A phase that depends on any of them must run on claude.
 
