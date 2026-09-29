@@ -75,6 +75,16 @@ The docs above apply to **claude phases**, whose prompts can invoke slash comman
 
 This repo is itself a Claude Code plugin. Its own commands, skills, and `model:` frontmatter are Claude Code features and are correctly Claude-specific. Only the description of the *platform runtime* is multi-harness.
 
+## Workflow YAML Examples
+
+Every fenced `yaml` code block in this repo is run through the platform's real validator (`WorkflowDefinition`, which rejects unknown keys). A fragment is wrapped in a minimal workflow; anything it declares must still be valid. Run it after touching any YAML example, against a Syntropic137 checkout synced at origin/main (the schema changes; a stale feature branch gives the wrong answer):
+
+```bash
+uv run --project <syntropic137-checkout> python scripts/validate_yaml_examples.py
+```
+
+It is not in CI: this repo has no Python tooling and the check needs the full platform environment.
+
 ## Writing Style
 
 Use colons `:` and commas `,` instead of dashes or em dashes in prose. This applies to all skill files, commands, and documentation.

@@ -21,7 +21,7 @@ There is no central registry. Anyone can create a marketplace by making a GitHub
 
 The official Syntropic137 marketplace is `syntropic137/syntropic137-marketplace`; it includes `code-review` and `sdlc-trunk` (3 workflows for PR review, CI self-healing, release prep).
 
-**Before installing third-party plugins:** review the phase prompts in `phases/*.md`. That is the real review - plugins execute with full agent permissions regardless of what `allowed_tools` declares, because it is not enforced at runtime (syntropic137#803).
+**Before installing third-party plugins:** review the phase prompts in `phases/*.md`. That is the real review: `allowed_tools` limits which tools a claude phase has, but a phase that keeps `Bash` can still do almost anything through the shell.
 
 ## Core Commands
 
