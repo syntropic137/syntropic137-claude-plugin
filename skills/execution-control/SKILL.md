@@ -46,7 +46,7 @@ Via API: `POST /api/v1/workflows/<id>/execute` with `{"task": "...", "inputs": {
 
 ## Monitoring Progress
 
-Check a specific execution: `syn control status <execution-id>`
+Check a specific execution: `syn execution show <execution-id>` for the phase breakdown. (`syn control status` prints the control state only - the id and its status, no phases.)
 
 List all active executions: `curl -sf http://localhost:8137/api/v1/executions | python3 -m json.tool`
 
@@ -87,17 +87,37 @@ curl -X POST http://localhost:8137/api/v1/executions/<id>/inject \
 
 Inject when the agent is heading in the wrong direction and you want to steer it without restarting. Use `"role": "system"` for budget or constraint warnings.
 
+### Inspecting finished phases while a run continues
+
+Pause used to be the answer here, and there is no direct replacement, because
+there was never a working one - the run continued regardless. What actually
+works:
+
+1. `syn execution show <id>` lists the phases that have completed and the
+   artifacts each produced. Completed phases are immutable, so reading them
+   while later phases run is safe.
+2. Inspect those artifacts with the artifact commands. The run carries on.
+3. If what you find means the run should change direction, INJECT - it takes
+   effect at the next yield point without stopping anything.
+4. Only if the run must not proceed at all, cancel it. Then decide between a
+   fresh execution and a resume.
+
+**Cancel is not a temporary pause.** It is permanent and it cannot be undone:
+a cancelled parent is resumable only with `--override-cancellation`, which is
+a fresh decision, and a resume inherits the parent's configuration so it
+cannot correct whatever the cancel was for.
+
 ### Cancel
 
 Cancel is permanent; it stops the execution and marks phases as SKIPPED:
 
 ```bash
-syn control cancel <execution-id> --reason "wrong workflow template used"
+syn control cancel <execution-id> --reason "wrong workflow template used" --force
 ```
 
 ## Troubleshooting a Failed Execution: 4 Steps
 
-**Step 1: Get the execution detail.** Run `syn control status <execution-id>` or `curl -sf http://localhost:8137/api/v1/executions/<id>`. Find which phase has `status: failed` and read its `error_message`.
+**Step 1: Get the execution detail.** Run `syn execution show <execution-id>` or `curl -sf http://localhost:8137/api/v1/executions/<id>`. Find which phase has `status: failed` and read its `error_message`.
 
 **Step 2: Check the failing phase's session.** Each phase has a `session_id`. Run `syn sessions show <session-id>` to see the operations timeline: what the agent was doing when it failed.
 

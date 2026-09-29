@@ -20,7 +20,8 @@ syn execution show <execution-id>
 ## What to Report
 
 ### On Each Check
-- Current status: RUNNING, PAUSED, COMPLETED, FAILED, CANCELLED
+- Current status: NOT_STARTED, RUNNING, COMPLETED, FAILED, CANCELLED, INTERRUPTED
+  (there is no PAUSED; it was removed in v0.32)
 - Active phase: name and order (e.g., "Phase 2/3: Analysis")
 - Duration so far
 - Accumulated cost if available
