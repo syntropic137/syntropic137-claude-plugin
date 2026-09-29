@@ -1,6 +1,6 @@
 ---
 name: execution-control
-description: Run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), and troubleshoot failed Syntropic137 executions
+description: Run workflows, monitor execution progress, use the control plane (cancel/inject), resume failed executions, and troubleshoot failed Syntropic137 executions
 ---
 
 # Execution Control: Syntropic137
@@ -9,7 +9,7 @@ When a workflow execution does something unexpected (runs too long, fails a phas
 
 ## When to Use This Skill
 
-Use this when you are: starting a workflow execution, monitoring progress across phases, intervening in a running execution (pause, inject context, cancel), or diagnosing a failure. 
+Use this when you are: starting a workflow execution, monitoring progress across phases, intervening in a running execution (inject context, cancel), resuming a failed one, or diagnosing a failure. 
 
 Not needed for designing the workflow template itself; use workflow-management for that. Not needed for deep cost or token analysis; use the observability skill.
 
@@ -19,11 +19,14 @@ Every execution moves through states. Understanding the state tells you what act
 
 ```
 NOT_STARTED → RUNNING → COMPLETED
-                      ↘ FAILED
-                      ↘ PAUSED → RUNNING (on resume)
-                      ↘ CANCELLED
-                      ↘ INTERRUPTED (partial state preserved)
+                      ↘ FAILED       ─┐
+                      ↘ CANCELLED    ─┤ resume → a NEW execution that inherits
+                      ↘ INTERRUPTED  ─┘ the completed phases (see below)
 ```
+
+There is no PAUSED state. It existed until v0.32, but nothing ever read the
+pause signal - the call returned 200 and the run continued - so the state, the
+events and the commands were all deleted rather than left looking real.
 
 Each **phase** within an execution has its own state: `PENDING → RUNNING → COMPLETED | FAILED | SKIPPED`.
 
@@ -53,16 +56,25 @@ The execution detail shows each phase's status, session ID, cost, and duration; 
 
 ## Control Plane: Intervening in a Running Execution
 
-### Pause and Resume
+### Resume
 
-Pause is **graceful**: the agent finishes its current tool call before halting:
+Resume does **not** continue the same run. It creates a NEW execution that
+inherits the phases that completed and restarts at the first one that did not,
+so a six-phase run that died in phase five costs you five and six, not all six.
 
 ```bash
-syn control pause <execution-id> --reason "reviewing intermediate results"
-syn control resume <execution-id>
+syn execution resume <execution-id>
+syn execution resume <id> --acknowledge-external-effects   # phase five had started; re-running may re-push
+syn execution resume <id> --override-cancellation          # the parent was CANCELLED
 ```
 
-Use pause when you want to inspect artifacts from completed phases before proceeding. The execution stays alive; all state is preserved.
+Applies to `FAILED` and `INTERRUPTED`, and to `CANCELLED` only with the
+override - a cancel was a decision, so resuming past it needs a fresh one. A
+`COMPLETED` run has nothing left to resume. One resume per execution; the
+original keeps its record and stays exactly as it was.
+
+The call returns once the resume is ADMITTED. The child is created and started
+by a background processor, so watch it with `syn execution show <child-id>`.
 
 ### Inject Context
 
