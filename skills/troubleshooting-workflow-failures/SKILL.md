@@ -53,7 +53,7 @@ syn observe tools <session-id>
 
 This gives you precise timing and success/failure for every tool call. Look for:
 
-- **`TOOL_BLOCKED`** entries: a SAFETY VALIDATOR blocked the tool call. This does NOT come from the phase's `allowed_tools`, which is not enforced at runtime (syntropic137#803) - widening that list will not clear a TOOL_BLOCKED. Read the block reason recorded on the event.
+- **`TOOL_BLOCKED`** entries: a SAFETY VALIDATOR blocked the tool call. This does NOT come from the phase's `allowed_tools`: on a claude phase that list decides which tools exist, so an unlisted tool is absent rather than blocked, and widening the list will not clear a TOOL_BLOCKED. Read the block reason recorded on the event.
 - **Long `duration_ms`** on a `Bash` tool: a hanging command that eventually caused a timeout.
 - **Failed `Read` or `Write` calls**: permission issues or paths that don't exist in the workspace.
 - **Repeated calls to the same file**: the agent is looping, usually because a previous step produced unexpected output.
@@ -96,7 +96,7 @@ Once you've identified the root cause:
 - **Tool blocked**: read the validator's block reason on the TOOL_BLOCKED event. Editing the phase's `allowed_tools` does not affect it
 - **Budget too low**: re-run with `--max-budget-usd <higher>` or edit the phase config
 - **Workspace issue**: fix infrastructure first (platform-ops skill), then re-run
-- **Prompt producing bad output**: revise the phase `prompt_template` and validate the YAML before re-registering
+- **Prompt producing bad output**: revise the phase `prompt_template`, validate the YAML, then update the workflow in place the same way it was first registered (see the workflow-management skill, "Updating a Workflow In Place")
 
 ## Integration
 
