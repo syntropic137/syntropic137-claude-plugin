@@ -115,12 +115,12 @@ phases:
 | `id` | yes | NOT `phase_id`. Letters, digits, `.`, `_`, `-`; must start with a letter or digit. Unique. `{{<id>}}` substitutes this phase's output into later phases. |
 | `name` | yes | |
 | `order` | yes | Integer >= 1, unique. |
-| `prompt_template` / `prompt_file` | one of | Not both. `prompt_file` only resolves when installed as a package (see below). |
+| `prompt_template` / `prompt_file` | set one | At most one: both together is rejected. Neither is accepted by the validator, but the phase then runs with no instructions, so always set one. `prompt_file` only resolves when installed as a package (see below). |
 | `description`, `argument_hint`, `model` | no | Phase-level `model` wins over `agent.model`. |
 | `execution_type` | no | Only `sequential` (the default). `parallel` and `human_in_loop` are **rejected**: neither is implemented. Omit the key. |
 | `input_artifacts`, `output_artifacts` | no | Artifact TYPE names. Every `input_artifacts` entry must be produced by an earlier phase's `output_artifacts` or match a workflow input name, or the workflow is rejected. NOT `input_artifact_types` / `output_artifact_types` (those are the API's names, not YAML keys). |
 | `timeout_seconds` | no | The lever for bounding a phase. |
-| `allowed_tools` | no | Claude phases only; see "Choose the harness". |
+| `allowed_tools` | no | Claude phases. On a codex phase a non-empty list is rejected. See "Choose the harness". |
 | `clone_repos` | no | `false` skips the checkout for this phase (repo token and `{{repo_url}}` still provided). Default `true`. |
 | `can_open_pr` | no | Default `false`. The phase token cannot open a PR unless this is `true`. |
 | `delivers_repo_changes` | no | Default `true`. Set `false` on report-only phases (research, review, verify) so leftover build files do not fail the unpushed-work gate. |
@@ -206,7 +206,7 @@ Rules that bite:
 - **Codex phases need `CODEX_AUTH_JSON`** set in the platform `.env`. Without it, a phase declaring `provider: codex` fails to provision.
 - **Name a concrete model id on every codex phase.** Codex does not report its model on the wire, so omitting `model` leaves the run **unpriced**: no cost lands in `syn costs` for that phase.
 - **Do not set `agent.sandbox`.** Only `full-access` (the default when omitted) is accepted. `read-only` and `workspace-write` are rejected: codex enforces them with bubblewrap, which cannot run inside the workspace container, so the phase could not even read the repository or write `artifacts/output/`. Claude ignores the field. The workspace container is the isolation boundary. This includes review phases: a reviewer publishes its verdict by writing under `artifacts/output/`.
-- **`allowed_tools` is enforced on claude phases** as the list of tools the agent has; anything not listed is unavailable. Names come from a closed set: `Bash`, `Edit`, `Glob`, `Grep`, `Read`, `Skill`, `Task`, `WebFetch`, `WebSearch`, `Write` (case-insensitive). An unknown name is rejected. Omit the key to keep every tool. On a **codex** phase `allowed_tools` is rejected: codex has no tool vocabulary.
+- **`allowed_tools` is enforced on claude phases** as the list of tools the agent has; anything not listed is unavailable. Names come from a closed set: `Bash`, `Edit`, `Glob`, `Grep`, `Read`, `Skill`, `Task`, `WebFetch`, `WebSearch`, `Write` (case-insensitive). An unknown name is rejected. Omit the key to keep every tool. On a **codex** phase a non-empty `allowed_tools` is rejected (an empty list is accepted and means nothing): codex has no tool vocabulary.
 - **`allow_delegation: true`** (under `agent:`) stages both harnesses' credentials so the phase's agent can shell out one-shot to the other CLI. The deployment then needs credentials for both.
 - **Claude-only features**: hook events, subagent tracking, TodoWrite, and Claude plugins. A phase that depends on any of them must run on claude.
 

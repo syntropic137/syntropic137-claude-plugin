@@ -13,7 +13,7 @@ Use this skill when you need to find, install, or share workflow plugins. The Sy
 
 Use `/syn-marketplace` when you want to: browse workflows available in registered sources, install a community workflow, update installed plugins to the latest version, export one of your workflows to share, or register a new source repo.
 
-For the **security model** behind plugin installation (what to check before installing third-party workflows, and why `allowed_tools` declarations are NOT a control), the marketplace skill has the full guide.
+For the **security model** behind plugin installation (what to check before installing third-party workflows, and why `allowed_tools` restricts a claude phase's tools but does not replace reviewing the prompts), the marketplace skill has the full guide.
 
 ## The Distributed Marketplace Model
 

@@ -40,7 +40,8 @@ For each phase prompt in `phases/*.md`, check for:
 
 **On a claude phase, `allowed_tools` decides which tools exist** (syntropic137#964):
 an unlisted tool is not available to the agent. Omitting the key keeps every
-tool. Codex phases reject the key, because codex has no tool vocabulary. The
+tool. On a codex phase a non-empty list is rejected at authoring, because codex has
+no tool vocabulary; an empty list is accepted. The
 valid names are `Bash`, `Edit`, `Glob`, `Grep`, `Read`, `Skill`, `Task`,
 `WebFetch`, `WebSearch`, `Write`.
 
@@ -52,7 +53,7 @@ when it excludes `Bash`, and still review the prompt. Flag:
   to edit files is worth flagging, because the declaration and the prompt
   disagree about what the plugin is for
 - **Check model assignments**: the top-tier model for a trivial task may indicate cost padding. On claude phases that is `opus`, on codex phases it is whichever concrete model id is named
-- **Check harness declarations**: a `provider: codex` phase with no `model` runs unpriced, so its tokens are counted but its dollar cost never appears in reports. Flag it. Do not flag `allowed_tools` on a codex phase as a rejection, it is inert on both harnesses like every other tool list
+- **Check harness declarations**: a `provider: codex` phase with no `model` runs unpriced, so its tokens are counted but its dollar cost never appears in reports. Flag it. A codex phase with a non-empty `allowed_tools` cannot have been installed through the current validator (it is rejected at authoring); if you see one, the workflow was authored against an older platform or never validated, so flag that it will not install
 
 The real analysis is section 2: what the phase prompts actually instruct.
 
@@ -95,10 +96,11 @@ Present findings as:
 
 ### Declared vs Actual Behaviour
 
-Do NOT grade tool declarations as "overly broad" or "justified" - they are not
-enforced, so every row would grade the same real access. Report only where a
-declaration DISAGREES with what the phase prompt instructs, which is a signal
-about the author, not a control.
+On claude phases a declaration is enforced: it is the set of tools the agent
+has. Report the declared set, whether it keeps `Bash` (which grants broad reach
+through the shell regardless of the rest of the list), and where a declaration
+DISAGREES with what the phase prompt instructs. A restrictive list does not
+replace reviewing the prompt.
 
 | Workflow | Phase | Declares | Prompt actually instructs | Mismatch? |
 |----------|-------|----------|---------------------------|-----------|
