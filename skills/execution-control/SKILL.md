@@ -1,6 +1,6 @@
 ---
 name: execution-control
-description: Run workflows, monitor execution progress, use the control plane (pause/resume/cancel/inject), and troubleshoot failed Syntropic137 executions
+description: Run workflows, monitor execution progress, use the control plane (cancel/inject), resume failed executions, and troubleshoot failed Syntropic137 executions
 ---
 
 # Execution Control: Syntropic137
@@ -9,7 +9,7 @@ When a workflow execution does something unexpected (runs too long, fails a phas
 
 ## When to Use This Skill
 
-Use this when you are: starting a workflow execution, monitoring progress across phases, intervening in a running execution (pause, inject context, cancel), or diagnosing a failure. 
+Use this when you are: starting a workflow execution, monitoring progress across phases, intervening in a running execution (inject context, cancel), resuming a failed one, or diagnosing a failure. 
 
 Not needed for designing the workflow template itself; use workflow-management for that. Not needed for deep cost or token analysis; use the observability skill.
 
@@ -19,11 +19,14 @@ Every execution moves through states. Understanding the state tells you what act
 
 ```
 NOT_STARTED → RUNNING → COMPLETED
-                      ↘ FAILED
-                      ↘ PAUSED → RUNNING (on resume)
-                      ↘ CANCELLED
-                      ↘ INTERRUPTED (partial state preserved)
+                      ↘ FAILED       ─┐
+                      ↘ CANCELLED    ─┤ resume → a NEW execution that inherits
+                      ↘ INTERRUPTED  ─┘ the completed phases (see below)
 ```
+
+There is no PAUSED state. It existed until v0.32, but nothing ever read the
+pause signal - the call returned 200 and the run continued - so the state, the
+events and the commands were all deleted rather than left looking real.
 
 Each **phase** within an execution has its own state: `PENDING → RUNNING → COMPLETED | FAILED | SKIPPED`.
 
@@ -43,7 +46,7 @@ Via API: `POST /api/v1/workflows/<id>/execute` with `{"task": "...", "inputs": {
 
 ## Monitoring Progress
 
-Check a specific execution: `syn control status <execution-id>`
+Check a specific execution: `syn execution show <execution-id>` for the phase breakdown. (`syn control status` prints the control state only - the id and its status, no phases.)
 
 List all active executions: `curl -sf http://localhost:8137/api/v1/executions | python3 -m json.tool`
 
@@ -53,16 +56,25 @@ The execution detail shows each phase's status, session ID, cost, and duration; 
 
 ## Control Plane: Intervening in a Running Execution
 
-### Pause and Resume
+### Resume
 
-Pause is **graceful**: the agent finishes its current tool call before halting:
+Resume does **not** continue the same run. It creates a NEW execution that
+inherits the phases that completed and restarts at the first one that did not,
+so a six-phase run that died in phase five costs you five and six, not all six.
 
 ```bash
-syn control pause <execution-id> --reason "reviewing intermediate results"
-syn control resume <execution-id>
+syn execution resume <execution-id>
+syn execution resume <id> --acknowledge-external-effects   # phase five had started; re-running may re-push
+syn execution resume <id> --override-cancellation          # the parent was CANCELLED
 ```
 
-Use pause when you want to inspect artifacts from completed phases before proceeding. The execution stays alive; all state is preserved.
+Applies to `FAILED` and `INTERRUPTED`, and to `CANCELLED` only with the
+override - a cancel was a decision, so resuming past it needs a fresh one. A
+`COMPLETED` run has nothing left to resume. One resume per execution; the
+original keeps its record and stays exactly as it was.
+
+The call returns once the resume is ADMITTED. The child is created and started
+by a background processor, so watch it with `syn execution show <child-id>`.
 
 ### Inject Context
 
@@ -75,17 +87,37 @@ curl -X POST http://localhost:8137/api/v1/executions/<id>/inject \
 
 Inject when the agent is heading in the wrong direction and you want to steer it without restarting. Use `"role": "system"` for budget or constraint warnings.
 
+### Inspecting finished phases while a run continues
+
+Pause used to be the answer here, and there is no direct replacement, because
+there was never a working one - the run continued regardless. What actually
+works:
+
+1. `syn execution show <id>` lists the phases that have completed and the
+   artifacts each produced. Completed phases are immutable, so reading them
+   while later phases run is safe.
+2. Inspect those artifacts with the artifact commands. The run carries on.
+3. If what you find means the run should change direction, INJECT - it takes
+   effect at the next yield point without stopping anything.
+4. Only if the run must not proceed at all, cancel it. Then decide between a
+   fresh execution and a resume.
+
+**Cancel is not a temporary pause.** It is permanent and it cannot be undone:
+a cancelled parent is resumable only with `--override-cancellation`, which is
+a fresh decision, and a resume inherits the parent's configuration so it
+cannot correct whatever the cancel was for.
+
 ### Cancel
 
 Cancel is permanent; it stops the execution and marks phases as SKIPPED:
 
 ```bash
-syn control cancel <execution-id> --reason "wrong workflow template used"
+syn control cancel <execution-id> --reason "wrong workflow template used" --force
 ```
 
 ## Troubleshooting a Failed Execution: 4 Steps
 
-**Step 1: Get the execution detail.** Run `syn control status <execution-id>` or `curl -sf http://localhost:8137/api/v1/executions/<id>`. Find which phase has `status: failed` and read its `error_message`.
+**Step 1: Get the execution detail.** Run `syn execution show <execution-id>` or `curl -sf http://localhost:8137/api/v1/executions/<id>`. Find which phase has `status: failed` and read its `error_message`.
 
 **Step 2: Check the failing phase's session.** Each phase has a `session_id`. Run `syn sessions show <session-id>` to see the operations timeline: what the agent was doing when it failed.
 
