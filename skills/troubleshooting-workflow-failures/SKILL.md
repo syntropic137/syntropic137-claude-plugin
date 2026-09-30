@@ -53,7 +53,7 @@ syn observe tools <session-id>
 
 This gives you precise timing and success/failure for every tool call. Look for:
 
-- **`TOOL_BLOCKED`** entries: the agent tried to use a tool not in the phase's `allowed_tools`. This is the most common cause of "failed immediately" phases.
+- **`TOOL_BLOCKED`** entries: a SAFETY VALIDATOR blocked the tool call. This does NOT come from the phase's `allowed_tools`: on a claude phase that list decides which tools exist, so an unlisted tool is absent rather than blocked, and widening the list will not clear a TOOL_BLOCKED. Read the block reason recorded on the event.
 - **Long `duration_ms`** on a `Bash` tool: a hanging command that eventually caused a timeout.
 - **Failed `Read` or `Write` calls**: permission issues or paths that don't exist in the workspace.
 - **Repeated calls to the same file**: the agent is looping, usually because a previous step produced unexpected output.
@@ -72,10 +72,12 @@ If the session ended abruptly without a clear tool error, budget or context exha
 
 | Symptom | Root Cause | Fix |
 |---------|-----------|-----|
-| Phase fails immediately | `TOOL_BLOCKED`: tool not in `allowed_tools` | Add the tool to the phase config in the workflow template |
+| Phase fails immediately | `TOOL_BLOCKED`: a safety validator blocked the call | Read the block reason on the event; `allowed_tools` is not the cause and editing it changes nothing |
 | Phase fails on `Bash` | Command hangs or returns error | Check the bash command in the prompt; add `timeout` or restrict the command |
 | Phase times out | `timeout_seconds` too low for the task | Increase `timeout_seconds` in the phase definition |
-| Budget exhausted | Cost hit `max_budget_usd` | Increase budget or reduce phase scope; use haiku for cheaper phases |
+| Budget exhausted | Cost hit `max_budget_usd` | Increase budget or reduce phase scope, or drop shallow phases to a cheaper model for their harness (`haiku` on claude, a smaller named model on codex) |
+| Codex phase fails to provision | `CODEX_AUTH_JSON` missing from the platform `.env` | Set it, then restart the stack. Every `provider: codex` phase needs it |
+| A phase shows tokens but no dollar cost | Codex phase with no `agent.model` | Codex does not report its model on the wire, so the run is unpriced and its tokens land under `unpriced_tokens`. Name a concrete model id in the workflow YAML |
 | Workspace provision fails | Docker image missing or corrupt | `just workspace-build` to rebuild; check Docker disk space |
 | Agent loops on same calls | Previous phase output was unexpected format | Inspect the artifact from the previous phase; revise its prompt to produce cleaner output |
 | Context window hit | Too much input in a single turn | Restructure prompts to load targeted files rather than scanning broadly |
@@ -85,16 +87,16 @@ If the session ended abruptly without a clear tool error, budget or context exha
 If you see any of these, don't keep iterating on the same execution:
 
 - **Three runs, same phase failing with the same error**: the workflow design is wrong, not the execution
-- **TOOL_BLOCKED on a tool that's obviously needed**: the `allowed_tools` list in the phase config needs to be reviewed; running again won't fix it
+- **TOOL_BLOCKED on a tool that's obviously needed**: a safety validator refused it. Read the reason on the event; running again won't fix it, and neither will editing `allowed_tools`
 - **Workspace provision failing repeatedly**: infrastructure problem; run `just health-check` and `just workspace-build` before any more executions
 
 ## After Diagnosing
 
 Once you've identified the root cause:
-- **Tool blocked / wrong tools**: edit the workflow template's phase `allowed_tools` (workflow-management skill)
+- **Tool blocked**: read the validator's block reason on the TOOL_BLOCKED event. Editing the phase's `allowed_tools` does not affect it
 - **Budget too low**: re-run with `--max-budget-usd <higher>` or edit the phase config
 - **Workspace issue**: fix infrastructure first (platform-ops skill), then re-run
-- **Prompt producing bad output**: revise the phase `prompt_template` and validate the YAML before re-registering
+- **Prompt producing bad output**: revise the phase `prompt_template`, validate the YAML, then update the workflow in place the same way it was first registered (see the workflow-management skill, "Updating a Workflow In Place")
 
 ## Integration
 

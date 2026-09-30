@@ -69,7 +69,28 @@ When authoring workflow phases, skills, or commands, reference the official Clau
 - Commands reference: https://code.claude.com/docs/en/commands.md
 - Skills reference: https://code.claude.com/docs/en/skills.md
 
-Each Syntropic137 workflow phase is a Claude CLI invocation. Phase prompts can invoke slash commands and skills directly. Workflow authors should be familiar with what commands and skills are available.
+Each Syntropic137 workflow phase is one headless agent invocation, on the harness that phase declares in its workflow YAML `agent` block: `provider: claude` (`claude -p`) or `provider: codex` (`codex exec`). Claude is the default when no `agent` block is present.
+
+The docs above apply to **claude phases**, whose prompts can invoke slash commands and skills directly. Codex phases cannot invoke slash commands or Claude plugins, so write their prompts as plain instructions. Skills are the exception: the pinned `skills` CLI installs them per harness, so a codex phase can use installed skills.
+
+This repo is itself a Claude Code plugin. Its own commands, skills, and `model:` frontmatter are Claude Code features and are correctly Claude-specific. Only the description of the *platform runtime* is multi-harness.
+
+## Workflow YAML Examples
+
+Every fenced `yaml` code block in this repo is loaded with the platform's real `WorkflowDefinition.from_file` (schema with unknown keys rejected, `prompt_file` resolved relative to the doc, every phase converted to its domain form). A fragment is wrapped in a minimal workflow; anything it declares must still be valid. It does not cover what the API does after parsing (plugin/skill resolution, install provenance) or execution-time checks.
+
+The schema is whatever Syntropic137 checkout you run it with. The script prints that checkout's path and commit and refuses unless the commit is that checkout's `origin/main`. Run it from a detached origin/main worktree, never a feature branch:
+
+```bash
+git -C <syntropic137> fetch origin
+git -C <syntropic137> worktree add --detach <wt> origin/main
+git -C <wt> submodule update --init lib/agentic-workspace lib/event-sourcing-platform
+uv sync --project <wt>
+uv run --project <wt> python scripts/validate_yaml_examples.py
+git -C <syntropic137> worktree remove <wt>
+```
+
+It is not in CI: this repo has no Python tooling and the check needs the full platform environment.
 
 ## Writing Style
 

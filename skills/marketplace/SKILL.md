@@ -63,7 +63,7 @@ syn workflow install github.com/yourorg/your-plugin
 syn workflow install ./path/to/plugin
 
 # List installed plugins
-syn workflow installed
+syn workflow packages
 
 # Update an installed plugin
 syn workflow update code-review
@@ -100,7 +100,7 @@ syn workflow validate ./path/to/workflow.yaml
 Before installing plugins from third-party marketplaces:
 
 - **Review the source**: plugins contain phase prompts that instruct agents. Check for suspicious patterns in `phases/*.md` files
-- **Check tool access**: review `allowed_tools` declarations in workflow definitions. Be cautious of plugins requesting broad tool access (especially `edit` and `bash`) without clear justification
+- **Do NOT treat `allowed_tools` as the whole review**: on a claude phase it does limit which tools exist, but any phase that keeps `Bash` can still do almost anything through the shell, and a codex phase cannot declare a non-empty list. Read the phase prompts: they are what actually determines what the agent does.
 - **Use the security-reviewer agent**: ask Claude to review a marketplace or plugin for security before installing
 
 Plugins execute with the same permissions as any workflow on your platform. Treat third-party plugins like any other code dependency: review before installing.
@@ -142,7 +142,7 @@ syn workflow list    # Verify: 4 workflows created
 ### "What plugins do I have installed?"
 
 ```bash
-syn workflow installed
+syn workflow packages
 ```
 
 ### "Remove a plugin I no longer need"

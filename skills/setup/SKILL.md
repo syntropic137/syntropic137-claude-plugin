@@ -61,9 +61,21 @@ Re-run a single stage: `just setup-stage <stage_name>` (source repo) or `npx @sy
 
 Two files are kept separate to isolate application config from infrastructure config:
 
-**Root `.env`** (application): `ANTHROPIC_API_KEY`, `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`, `APP_ENVIRONMENT`
+**Root `.env`** (application): `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `CODEX_AUTH_JSON`, `SYN_GITHUB_APP_ID`, `SYN_GITHUB_APP_NAME`, `SYN_GITHUB_WEBHOOK_SECRET`, `APP_ENVIRONMENT`
 
-**`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_PUBLIC_HOSTNAME`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`
+Agent credentials are per harness, and a workflow picks its harness per phase:
+
+| Variable | Needed for |
+|---|---|
+| `ANTHROPIC_API_KEY` | phases running on `provider: claude`, API-key auth |
+| `CLAUDE_CODE_OAUTH_TOKEN` | phases running on `provider: claude`, subscription auth |
+| `CODEX_AUTH_JSON` | phases running on `provider: codex`. Without it, a codex phase fails to provision |
+
+You need credentials for every harness your workflows can reach. That is usually the harnesses your phases name, but a phase with `agent.allow_delegation: true` (set under the phase's `agent:` block) can hand work to the other harness, so a claude phase that may delegate to codex still needs `CODEX_AUTH_JSON` set on the deployment, and the reverse holds too.
+
+`CODEX_AUTH_JSON` is a deployment variable. It is never placed in an agent environment: provisioning writes its contents to `~/.codex/auth.json` at mode 0600 inside the workspace and deletes the staged copy.
+
+**`infra/.env`** (infrastructure): `CLOUDFLARE_TUNNEL_TOKEN`, `SYN_PUBLIC_HOSTNAME`, `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `REDIS_PASSWORD`, `SYN_API_PASSWORD` (selfhost basic-auth password for the gateway, gates the LAN and global tiers; see ADR-059 in the parent Syntropic137 repository's ADR documentation)
 
 Run `just dev-doctor` to diagnose env var issues.
 
