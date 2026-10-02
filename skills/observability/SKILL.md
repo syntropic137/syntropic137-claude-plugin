@@ -36,7 +36,9 @@ One `AgentSession` = one headless agent invocation in one workspace. That invoca
 
 **Telemetry depth is not equal across harnesses.** Hook events, subagent tracking, and TodoWrite are Claude-only, so a codex session's timeline is thinner by construction. A sparse timeline on a codex phase is expected, not a sign of failure.
 
-List sessions: `syn sessions list`, optionally filtered with `--workflow <id>` or `--status running`.
+List sessions: `syn sessions list`, optionally filtered with `--workflow <id>`, `--execution <id>` or `--status running`. These are platform sessions only.
+
+**A run can hold more sessions than its phases.** Delegates an agent starts inside its workspace (`claude -p`, `codex exec`) and the native transcripts each harness records are not platform sessions. For every session of a run, with lineage, coverage, gaps and transcripts, use `syn execution sessions <execution-id> --all` and the session-discovery skill. Never treat a session count as complete unless its coverage is `reconciled`.
 
 Show a session: `syn sessions show <session-id>` to view the operations log, total tokens, cost, and duration.
 
