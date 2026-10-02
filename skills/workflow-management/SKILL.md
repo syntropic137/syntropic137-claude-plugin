@@ -121,7 +121,7 @@ phases:
 | `timeout_seconds` | no | The lever for bounding a phase. |
 | `allowed_tools` | no | Claude phases. On a codex phase a non-empty list is rejected. See "Choose the harness". |
 | `clone_repos` | no | `false` skips the checkout for this phase (repo token and `{{repo_url}}` still provided). Default `true`. |
-| `can_open_pr` | no | **Inert since #1478.** Still accepted so existing YAML loads, but it gates nothing: every phase token now carries `pull_requests: write`. Do not add it to new workflows. |
+| `can_open_pr` | no | **Inert since #1478.** Still accepted so existing YAML loads, but it gates nothing. Do not add it to new workflows. Phase tokens carry `pull_requests: write` today; the agreed direction is that the PLATFORM opens the draft PR and agents go back to read-only on PRs, so do not build on the current permission either way (syntropic137/syntropic137#1492). |
 | `delivers_repo_changes` | no | Default `true`. Set `false` on report-only phases (research, review, verify) so leftover build files do not fail the unpushed-work gate. |
 | `agent` | no | `provider`, `model`, `allow_delegation`, `sandbox`. See below. |
 | `skills`, `claude_plugins` | no | Phase-scope refs. |
