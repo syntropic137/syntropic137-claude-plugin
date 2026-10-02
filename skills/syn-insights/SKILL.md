@@ -23,7 +23,8 @@ A session = one headless agent invocation in one workspace, `claude -p` or `code
 syn sessions list                              # all sessions
 syn sessions list --workflow <workflow-id>     # filter by workflow
 syn sessions list --status running             # filter by status
-syn sessions list <session-id>                 # session detail with operations log
+syn sessions show <session-id>                 # session detail with operations log
+syn execution sessions <execution-id> --all    # every session of a run: delegates, native transcripts, lineage, gaps
 ```
 
 API: `GET http://localhost:8137/api/v1/sessions` (supports `?workflow_id=<id>&status=<status>`)

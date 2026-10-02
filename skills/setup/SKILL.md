@@ -101,7 +101,7 @@ In selfhost, the GitHub App PEM is a Docker secret mounted at runtime; it never 
 
 **TimescaleDB slow or unhealthy:** Common root cause for cascading failures. Event Store can't connect, so the API can't start. Run `just health-wait 180` and retry before digging deeper.
 
-**Workspace build fails:** Check disk space, check `lib/agentic-primitives` submodule status, then `just workspace-build`. Apple Silicon: Rust build takes 5-10 min, so don't interrupt it.
+**Workspace build fails:** Check disk space, check `lib/agentic-workspace` submodule status (`git submodule update --init lib/agentic-workspace`), then `just workspace-build`. Apple Silicon: Rust build takes 5-10 min, so don't interrupt it.
 
 **Webhooks not arriving:** Check `grep DEV__SMEE_URL .env`; if empty, you're using Cloudflare. Check Cloudflare tunnel status in Zero Trust dashboard. Dev: `just dev-webhooks-logs`.
 
