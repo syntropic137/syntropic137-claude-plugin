@@ -100,13 +100,15 @@ syn execution transcript <execution-id> <harness> <native-id> <archived-bytes-sh
 Pull every local transcript of a run:
 
 ```bash
+EXEC=<execution-id>
 mkdir -p transcripts
-jq -r '.pages[] | select(.kind == "capture") | .items[]
+jq -c '.pages[] | select(.kind == "capture") | .items[]
   | select((.destination // "local") == "local" and .availability == "present")
-  | [.node.harness, .node.local_id, .archived_byte_hash] | @tsv' inventory.json | sort -u |
-while IFS=$'\t' read -r harness native sha; do
-  syn execution transcript "$EXEC" "$harness" "$native" "$sha" --json \
-    > "transcripts/${harness}-${native//\//_}-${sha:0:12}.json" || echo "unavailable: $harness $native"
+  | {harness: .node.harness, native: .node.local_id, sha: .archived_byte_hash}' inventory.json | sort -u |
+while IFS= read -r rec; do
+  harness=$(jq -r .harness <<<"$rec"); native=$(jq -r .native <<<"$rec"); sha=$(jq -r .sha <<<"$rec")
+  syn execution transcript "$EXEC" "$harness" "$native" "$sha" --json > "transcripts/$sha.json" \
+    || echo "unavailable: $rec"
 done
 ```
 
@@ -127,7 +129,7 @@ When `summary.remote_replication` is `enabled`, the inventory is also replicated
 
 ## Learning-Loop Review
 
-1. `syn execution sessions <id> --all --json --require-complete > inventory.json`. If it fails on `open`, the run is settling: tell the user and offer to re-check later. On `missing`, `conflicting` or `unsupported`, continue but label the review partial and list the gaps.
+1. `syn execution sessions <id> --all --json --require-complete > inventory.json`. If it fails on `open`, the run may still be running or settling: report the coverage and offer to check again later. On `missing`, `conflicting` or `unsupported`, continue but label the review partial and list the gaps.
 2. Build the delegation tree from edges and memberships (phase and attempt per session).
 3. List failed, never-launched and missing delegates from the gaps, with their parent.
 4. Pull transcripts; for each session note what it was asked, what it did, how it ended.
