@@ -95,6 +95,7 @@ Skills give Claude deep understanding of the system. They're automatically loade
 | **workflow-management** | Creating workflows as CC commands: `$ARGUMENTS`, `{{variable}}`, `{{phase-id}}` substitution. Input declarations, per-phase model overrides, YAML schema, RIPER-5 and research patterns. |
 | **execution-control** | Running workflows (`--task`), monitoring progress, control plane (cancel/inject), resuming a failed run into a new execution, Processor To-Do List internals, troubleshooting failures. |
 | **observability** | Sessions, tool timelines, token metrics, cost breakdowns. Two-lane architecture. How to interpret "why was this expensive?" or "why did this fail?" |
+| **session-discovery** | Every session of a workflow run (delegates, native transcripts), coverage and gaps, lineage, transcripts, and learning-loop reviews of a run. |
 | **organization** | Org→System→Repo hierarchy, cost rollup, health monitoring, contribution heatmaps. |
 | **github-automation** | GitHub App setup, webhook trigger rules with safety limits, input mapping from webhooks to workflow inputs, Cloudflare webhook delivery. |
 | **setup** | `npx @syntropic137/setup` CLI, published-container deployment, Docker Compose variants, secrets management, troubleshooting. |
