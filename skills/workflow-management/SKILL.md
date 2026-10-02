@@ -145,7 +145,7 @@ Each entry under `inputs` takes only `name`, `description`, `required` (default 
 | `allow_delegation` on a phase | `agent: { allow_delegation: true }` |
 | `execution_type: parallel` / `human_in_loop` | omit `execution_type` |
 | `max_tokens` | `timeout_seconds` |
-| `agent.sandbox: read-only` / `workspace-write` | omit `agent.sandbox` |
+| `agent.sandbox: read-only` | `agent.sandbox: workspace-write` |
 | an input named `repository` / `repos` | `-R owner/repo` at run time, `{{repo_url}}` in prompts |
 
 ## Designing a Workflow
@@ -205,7 +205,7 @@ Rules that bite:
 
 - **Codex phases need `CODEX_AUTH_JSON`** set in the platform `.env`. Without it, a phase declaring `provider: codex` fails to provision.
 - **Name a concrete model id on every codex phase.** Codex does not report its model on the wire, so omitting `model` leaves the run **unpriced**: no cost lands in `syn costs` for that phase.
-- **Do not set `agent.sandbox`.** Only `full-access` (the default when omitted) is accepted. `read-only` and `workspace-write` are rejected: codex enforces them with bubblewrap, which cannot run inside the workspace container, so the phase could not even read the repository or write `artifacts/output/`. Claude ignores the field. The workspace container is the isolation boundary. This includes review phases: a reviewer publishes its verdict by writing under `artifacts/output/`.
+- **`agent.sandbox`: use `workspace-write` or omit it.** `workspace-write` is enforced least privilege on codex phases: codex may read, write and commit inside `/workspace` (including `artifacts/output/`) and nothing outside it, so it is the right level for review and verify phases. Omitted means `full-access`. `read-only` is rejected: it denies the `artifacts/output/` write a phase reports through. Claude ignores the field.
 - **`allowed_tools` is enforced on claude phases** as the list of tools the agent has; anything not listed is unavailable. Names come from a closed set: `Bash`, `Edit`, `Glob`, `Grep`, `Read`, `Skill`, `Task`, `WebFetch`, `WebSearch`, `Write` (case-insensitive). An unknown name is rejected. Omit the key to keep every tool. On a **codex** phase a non-empty `allowed_tools` is rejected (an empty list is accepted and means nothing): codex has no tool vocabulary.
 - **`allow_delegation: true`** (under `agent:`) stages both harnesses' credentials so the phase's agent can shell out one-shot to the other CLI. The deployment then needs credentials for both.
 - **Claude-only features**: hook events, subagent tracking, TodoWrite, and Claude plugins. A phase that depends on any of them must run on claude.
@@ -268,7 +268,7 @@ To start clean instead, `syn workflow delete <id> --force` archives the template
 
 **A codex phase with no `model`.** It runs, and it reports no dollar cost, so the phase lands in `unpriced_tokens` rather than in your cost total. The spend is real and your reported total is short. Always name a concrete model id on codex phases.
 
-**Declaring a sandbox level.** `agent.sandbox: read-only` looks like the safe choice for a reviewer. It is rejected, because it cannot run. Omit `agent.sandbox`.
+**Declaring `read-only` for a reviewer.** It looks like the safe choice and is rejected: it denies the `artifacts/output/` write the reviewer reports through. Use `agent.sandbox: workspace-write`, which keeps the reviewer's writes inside `/workspace`.
 
 **Missing `inputs` for values used in prompts.** If `{{base_branch}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
 
