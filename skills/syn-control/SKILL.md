@@ -104,6 +104,24 @@ lead with the bare form and retry on refusal: the refusal text is the only
 place the reason appears, and an agent that retries blindly will add flags it
 has not reasoned about.
 
+**"I resumed, it said yes, and no child ever appeared."**
+Run `syn execution show` on the PARENT. It prints the resume start record:
+
+```
+Resume start:  failed
+  Attempts:    3/3
+  Reason:      inherited artifact art-plan-2 resolved to no files
+```
+
+`pending` and `dispatched` mean wait. `paused` means admission is closed, usually
+a deploy draining, and it resumes itself. `retryable` means it will try again and
+`Attempts` shows how many are left. `started` means the child exists and you
+should look for it. `failed` is settled and `Reason` says why.
+
+Do not re-run the resume while the record is `pending`, `dispatched`, `paused` or
+`retryable` - the parent has already spent its one resume and a second request is
+refused. Read the record first.
+
 **"An execution has been running for 2 hours and looks stuck."**
 1. `syn execution show <id>` to identify which phase is stuck. `syn control
    status` will NOT tell you - it prints the execution id and its state, and

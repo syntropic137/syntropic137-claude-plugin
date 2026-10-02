@@ -73,6 +73,13 @@ override - a cancel was a decision, so resuming past it needs a fresh one. A
 `COMPLETED` run has nothing left to resume. One resume per execution; the
 original keeps its record and stays exactly as it was.
 
+`syn execution show` on the PARENT prints the resume start record - status,
+attempts over the ceiling, and a reason when it failed. That is how you answer
+"it said yes and no child appeared" without reading logs. A parent spends its
+one resume on admission, so a second request is refused while the first is
+still pending, dispatched, paused or retryable; read the record rather than
+re-running.
+
 The call returns once the resume is ADMITTED. The child is created and started
 by a background processor, so watch it with `syn execution show <child-id>`.
 
