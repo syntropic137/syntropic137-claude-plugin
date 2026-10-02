@@ -78,7 +78,6 @@ phases:
     order: 2
     input_artifacts: [research_notes]
     output_artifacts: [pull_request]
-    can_open_pr: true              # publishing is opt-in per phase
     agent:
       provider: claude
       model: opus
@@ -122,7 +121,7 @@ phases:
 | `timeout_seconds` | no | The lever for bounding a phase. |
 | `allowed_tools` | no | Claude phases. On a codex phase a non-empty list is rejected. See "Choose the harness". |
 | `clone_repos` | no | `false` skips the checkout for this phase (repo token and `{{repo_url}}` still provided). Default `true`. |
-| `can_open_pr` | no | Default `false`. The phase token cannot open a PR unless this is `true`. |
+| `can_open_pr` | no | **Inert since #1478.** Still accepted so existing YAML loads, but it gates nothing: every phase token now carries `pull_requests: write`. Do not add it to new workflows. |
 | `delivers_repo_changes` | no | Default `true`. Set `false` on report-only phases (research, review, verify) so leftover build files do not fail the unpushed-work gate. |
 | `agent` | no | `provider`, `model`, `allow_delegation`, `sandbox`. See below. |
 | `skills`, `claude_plugins` | no | Phase-scope refs. |
@@ -272,7 +271,7 @@ To start clean instead, `syn workflow delete <id> --force` archives the template
 
 **Missing `inputs` for values used in prompts.** If `{{base_branch}}` appears in a prompt but isn't declared, it won't be substituted. Validate the workflow before registering.
 
-**Splitting git operations across phases.** If phase 1 commits code and phase 2 tries to push or open a PR, phase 2 will start with a clean workspace and find nothing to push. All git operations, including commit, push, and `gh pr create`, must happen in the same phase that wrote the changes, and that phase needs `can_open_pr: true` to open a PR. If the workflow design requires separating research/implementation from the git step, have the implementation phase output a patch artifact and have the git phase apply it in a fresh clone.
+**Splitting git operations across phases.** If phase 1 commits code and phase 2 tries to push or open a PR, phase 2 will start with a clean workspace and find nothing to push. All git operations, including commit, push, and `gh pr create`, must happen in the same phase that wrote the changes. If the workflow design requires separating research/implementation from the git step, have the implementation phase output a patch artifact and have the git phase apply it in a fresh clone.
 
 **Expecting an approval gate.** No phase pauses for a human. Any workflow that writes, commits, or deploys and needs sign-off should be split so the human reviews the output of one workflow before running the next.
 
