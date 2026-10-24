@@ -121,7 +121,7 @@ phases:
 | `timeout_seconds` | no | The lever for bounding a phase. |
 | `allowed_tools` | no | Claude phases. On a codex phase a non-empty list is rejected. See "Choose the harness". |
 | `clone_repos` | no | `false` skips the checkout for this phase (repo token and `{{repo_url}}` still provided). Default `true`. |
-| `can_open_pr` | no | **Retired (syntropic137#1503).** Accepted and ignored with a notice so existing YAML still loads; do not add it to new workflows. Every phase token carries `pull_requests: write` (#1478): agents push code, open and update PRs, and comment on them, including codex leaving review comments. GitHub has no comment-only permission, so this is the deliberate owner decision (2026-10-04), not an interim state. |
+| `can_open_pr` | no | **Retired and refused (syntropic137#1502).** `syn workflow validate` and `syn workflow install` fail on it with an error naming the phase. To migrate, delete the line: there is no replacement, and the platform opens the PR host-side. Every phase token carries `pull_requests: write` (#1478): agents push code, open and update PRs, and comment on them, including codex leaving review comments. GitHub has no comment-only permission, so this is the deliberate owner decision (2026-10-04), not an interim state. |
 | `delivers_repo_changes` | no | Default `true`. Set `false` on report-only phases (research, review, verify) so leftover build files do not fail the unpushed-work gate. |
 | `agent` | no | `provider`, `model`, `allow_delegation`, `sandbox`. See below. |
 | `skills`, `claude_plugins` | no | Phase-scope refs. |
